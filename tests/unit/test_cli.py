@@ -76,3 +76,86 @@ def test_status_returns_error_for_missing_configuration(
 
     assert exit_code == 1
     assert "Configuration file not found" in captured.err
+
+
+def test_validate_repository_command_reports_success(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    """Confirm repository validation success is exposed through the CLI."""
+    from poe_backup_orchestrator.models import RepositoryValidationResult
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+
+    result = RepositoryValidationResult(
+        command=("poe-backup-repository", "--status"),
+        return_code=0,
+        mounted=True,
+        healthy=True,
+        operational=True,
+        standard_output="Operational Baseline\nHealthy\nRepository is mounted",
+        standard_error="",
+    )
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.validate_repository",
+        lambda: result,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "validate-repository",
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "Mounted: PASS" in captured.out
+    assert "Healthy: PASS" in captured.out
+    assert "Operational: PASS" in captured.out
+    assert "Result: PASS" in captured.out
+
+
+def test_validate_repository_command_reports_failure(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    """Confirm repository validation failure returns a nonzero exit code."""
+    from poe_backup_orchestrator.models import RepositoryValidationResult
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+
+    result = RepositoryValidationResult(
+        command=("poe-backup-repository", "--status"),
+        return_code=1,
+        mounted=False,
+        healthy=False,
+        operational=False,
+        standard_output="Repository unavailable",
+        standard_error="",
+    )
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.validate_repository",
+        lambda: result,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "validate-repository",
+        ]
+    )
+
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "Result: FAIL" in captured.out

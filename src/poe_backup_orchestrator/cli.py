@@ -10,6 +10,7 @@ from pathlib import Path
 from poe_backup_orchestrator import __version__
 from poe_backup_orchestrator.bootstrap import bootstrap_application
 from poe_backup_orchestrator.exceptions import OrchestratorError
+from poe_backup_orchestrator.services import validate_repository
 
 DEFAULT_CONFIG_PATH = Path("config/orchestrator.toml")
 
@@ -41,7 +42,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Display the current orchestrator status.",
     )
 
+    subparsers.add_parser(
+        "validate-repository",
+        help="Validate the managed backup repository.",
+    )
+
     return parser
+
+
+def _print_repository_validation() -> int:
+    """Validate the repository and print a structured result."""
+    result = validate_repository()
+
+    print("POE Backup Repository Validation")
+    print(f"Command exit code: {result.return_code}")
+    print(f"Mounted: {'PASS' if result.mounted else 'FAIL'}")
+    print(f"Healthy: {'PASS' if result.healthy else 'FAIL'}")
+    print(f"Operational: {'PASS' if result.operational else 'FAIL'}")
+    print(f"Result: {'PASS' if result.is_valid else 'FAIL'}")
+
+    if result.standard_output:
+        print()
+        print("Repository status output:")
+        print(result.standard_output)
+
+    if result.standard_error:
+        print()
+        print("Repository status error output:", file=sys.stderr)
+        print(result.standard_error, file=sys.stderr)
+
+    return 0 if result.is_valid else 1
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -55,17 +85,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     try:
         context = bootstrap_application(arguments.config)
+
+        if arguments.command == "status":
+            print("POE Backup Orchestrator")
+            print(f"Version: {__version__}")
+            print(f"Environment: {context.config.application.environment}")
+            print(f"Repository: {context.config.paths.repository_root}")
+            print("State: BOOTSTRAP_READY")
+            return 0
+
+        if arguments.command == "validate-repository":
+            return _print_repository_validation()
+
     except OrchestratorError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-
-    if arguments.command == "status":
-        print("POE Backup Orchestrator")
-        print(f"Version: {__version__}")
-        print(f"Environment: {context.config.application.environment}")
-        print(f"Repository: {context.config.paths.repository_root}")
-        print("State: BOOTSTRAP_READY")
-        return 0
 
     parser.error(f"Unsupported command: {arguments.command}")
     return 2
