@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "poe-backup-orchestrator"
+version = "0.1.0"
+description = "Governed backup orchestration for the Personal Executive Operating System"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "August Talmadge Simpson", email = "talmadge.simpson@me.com" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "pytest>=8.0",
+    "ruff>=0.8",
+    "twine>=5.0"
+]
+
+[project.scripts]
+poe-backup-orchestrator = "poe_backup_orchestrator.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
