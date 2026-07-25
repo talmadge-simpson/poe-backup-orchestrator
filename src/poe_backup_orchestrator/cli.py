@@ -9,8 +9,14 @@ from pathlib import Path
 
 from poe_backup_orchestrator import __version__
 from poe_backup_orchestrator.bootstrap import bootstrap_application
-from poe_backup_orchestrator.exceptions import OrchestratorError
-from poe_backup_orchestrator.services import validate_repository
+from poe_backup_orchestrator.exceptions import (
+    OrchestratorError,
+    RepositoryValidationError,
+)
+from poe_backup_orchestrator.services import (
+    create_sqlite_backup,
+    validate_repository,
+)
 
 DEFAULT_CONFIG_PATH = Path("config/orchestrator.toml")
 
@@ -47,6 +53,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Validate the managed backup repository.",
     )
 
+    sqlite_parser = subparsers.add_parser(
+        "backup-sqlite",
+        help="Create a consistent backup of a local SQLite database.",
+    )
+    sqlite_parser.add_argument(
+        "--source",
+        required=True,
+        type=Path,
+        help="Local path to the SQLite source database.",
+    )
+    sqlite_parser.add_argument(
+        "--asset-id",
+        required=True,
+        help="Stable identifier used for the staged backup artifact.",
+    )
+
     return parser
 
 
@@ -74,6 +96,16 @@ def _print_repository_validation() -> int:
     return 0 if result.is_valid else 1
 
 
+def _require_valid_repository() -> None:
+    """Prevent backup execution when the repository is unavailable."""
+    result = validate_repository()
+
+    if not result.is_valid:
+        raise RepositoryValidationError(
+            "Backup repository validation failed; backup was not started."
+        )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the Backup Orchestrator command-line interface."""
     parser = build_parser()
@@ -96,6 +128,26 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         if arguments.command == "validate-repository":
             return _print_repository_validation()
+
+        if arguments.command == "backup-sqlite":
+            _require_valid_repository()
+
+            result = create_sqlite_backup(
+                source_path=arguments.source,
+                staging_root=context.config.paths.staging_root,
+                asset_id=arguments.asset_id,
+            )
+
+            print("POE SQLite Backup")
+            print(f"Asset: {result.asset_id}")
+            print(f"Source: {result.source_path}")
+            print(f"Backup: {result.backup_path}")
+            print(f"Manifest: {result.manifest_path}")
+            print(f"Size: {result.size_bytes} bytes")
+            print(f"SHA-256: {result.sha256}")
+            print(f"SQLite integrity check: {result.integrity_check}")
+            print("Result: PASS")
+            return 0
 
     except OrchestratorError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
