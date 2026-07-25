@@ -1,0 +1,11 @@
+[application]
+name = "poe-backup-orchestrator"
+environment = "development"
+
+[paths]
+repository_root = "/srv/poe-backup"
+staging_root = "/srv/poe-backup/Staging"
+reports_root = "/srv/poe-backup/Reports"
+logs_root = "/srv/poe-backup/Logs"
+restore_tests_root = "/srv/poe-backup/Restore-Tests"
+quarantine_root = "/srv/poe-backup/Quarantine"
