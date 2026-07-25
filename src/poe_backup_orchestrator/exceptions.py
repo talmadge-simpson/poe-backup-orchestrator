@@ -23,3 +23,7 @@ class SqliteBackupError(OrchestratorError):
 
 class RegistryIngestionError(OrchestratorError):
     """Raised when a Registry acquisition artifact fails ingestion validation."""
+
+
+class RegistryAcceptanceError(OrchestratorError):
+    """Raised when a Registry acquisition cannot be accepted."""

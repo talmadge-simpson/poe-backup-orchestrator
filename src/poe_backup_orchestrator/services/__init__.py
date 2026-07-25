@@ -17,3 +17,7 @@ __all__ = [
     "validate_registry_acquisition",
     "validate_repository",
 ]
+
+from poe_backup_orchestrator.services.registry_acceptance import (
+    accept_registry_acquisition as accept_registry_acquisition,
+)

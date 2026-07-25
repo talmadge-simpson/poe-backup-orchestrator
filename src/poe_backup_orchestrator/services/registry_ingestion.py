@@ -88,7 +88,7 @@ def _verify_sqlite_integrity(snapshot_path: Path) -> str:
 
     try:
         connection = sqlite3.connect(
-            f"{snapshot_path.as_uri()}?mode=ro",
+            f"{snapshot_path.as_uri()}?mode=ro&immutable=1",
             uri=True,
         )
         row = connection.execute("PRAGMA integrity_check").fetchone()
