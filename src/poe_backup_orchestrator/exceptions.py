@@ -15,3 +15,7 @@ class BootstrapError(OrchestratorError):
 
 class RepositoryValidationError(OrchestratorError):
     """Raised when repository validation cannot be executed."""
+
+
+class SqliteBackupError(OrchestratorError):
+    """Raised when a consistent SQLite backup cannot be completed."""
