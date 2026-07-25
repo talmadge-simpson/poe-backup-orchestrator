@@ -13,3 +13,7 @@ __all__ = [
     "RepositoryValidationResult",
     "SqliteBackupResult",
 ]
+
+from poe_backup_orchestrator.models.registry_acceptance import (
+    RegistryAcceptanceResult as RegistryAcceptanceResult,
+)

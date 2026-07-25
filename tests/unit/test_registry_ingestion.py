@@ -187,3 +187,14 @@ def test_validate_registry_acquisition_rejects_corrupt_sqlite(tmp_path: Path) ->
 
     with pytest.raises(RegistryIngestionError, match="SQLite verification failed"):
         validate_registry_acquisition(manifest_path)
+
+
+def test_validate_registry_acquisition_does_not_create_sqlite_sidecars(
+    tmp_path: Path,
+) -> None:
+    manifest_path, snapshot_path = _create_acquisition(tmp_path)
+
+    validate_registry_acquisition(manifest_path)
+
+    assert not snapshot_path.with_name(snapshot_path.name + "-wal").exists()
+    assert not snapshot_path.with_name(snapshot_path.name + "-shm").exists()
