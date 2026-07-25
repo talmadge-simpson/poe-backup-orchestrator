@@ -19,3 +19,7 @@ class RepositoryValidationError(OrchestratorError):
 
 class SqliteBackupError(OrchestratorError):
     """Raised when a consistent SQLite backup cannot be completed."""
+
+
+class RegistryIngestionError(OrchestratorError):
+    """Raised when a Registry acquisition artifact fails ingestion validation."""
