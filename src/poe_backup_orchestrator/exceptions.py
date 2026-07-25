@@ -11,3 +11,7 @@ class ConfigurationError(OrchestratorError):
 
 class BootstrapError(OrchestratorError):
     """Raised when application initialization cannot be completed."""
+
+
+class RepositoryValidationError(OrchestratorError):
+    """Raised when repository validation cannot be executed."""
