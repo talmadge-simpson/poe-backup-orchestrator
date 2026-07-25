@@ -99,10 +99,6 @@ def publish_file(local_path: Path, final_path: Path) -> None:
         partial_path.unlink()
 
     shutil.copy2(local_path, partial_path)
-
-    with partial_path.open("rb") as published_file:
-        os.fsync(published_file.fileno())
-
     partial_path.replace(final_path)
 
 
