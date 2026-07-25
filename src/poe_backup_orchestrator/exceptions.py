@@ -27,3 +27,11 @@ class RegistryIngestionError(OrchestratorError):
 
 class RegistryAcceptanceError(OrchestratorError):
     """Raised when a Registry acquisition cannot be accepted."""
+
+
+class RegistryAcceptanceConflictError(RegistryAcceptanceError):
+    """Raised when an accepted run conflicts with a validated acquisition."""
+
+
+class RegistryAcceptanceInconsistentError(RegistryAcceptanceError):
+    """Raised when an existing acceptance destination is incomplete or polluted."""
