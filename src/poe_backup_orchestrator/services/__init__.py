@@ -17,6 +17,10 @@ from poe_backup_orchestrator.services.execution_state_machine import (
     ExecutionTransition,
     InvalidExecutionTransitionError,
 )
+from poe_backup_orchestrator.services.failure_mapping import (
+    FailurePolicy,
+    map_operational_failure,
+)
 from poe_backup_orchestrator.services.orchestrator import (
     RegistryBackupOrchestrator,
     StateMachineFactory,
@@ -39,6 +43,8 @@ __all__ = [
     "DEFAULT_REPOSITORY_COMMAND",
     "ExecutionStateMachine",
     "ExecutionTransition",
+    "map_operational_failure",
+    "FailurePolicy",
     "InvalidExecutionTransitionError",
     "RegistryAcceptanceAdapter",
     "RegistryAcceptanceService",
