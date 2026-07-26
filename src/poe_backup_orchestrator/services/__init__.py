@@ -18,4 +18,13 @@ __all__ = [
     "create_sqlite_backup",
     "validate_registry_acquisition",
     "validate_repository",
+    "ExecutionStateMachine",
+    "ExecutionTransition",
+    "InvalidExecutionTransitionError",
 ]
+
+from poe_backup_orchestrator.services.execution_state_machine import (
+    ExecutionStateMachine,
+    ExecutionTransition,
+    InvalidExecutionTransitionError,
+)
