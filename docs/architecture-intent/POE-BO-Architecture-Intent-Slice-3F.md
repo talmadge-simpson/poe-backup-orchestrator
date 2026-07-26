@@ -1,9 +1,9 @@
 # POE Backup Orchestrator
 ## Architecture Intent — Slice 3F: Operational Reporting
 
-**Status:** Approved for implementation  
-**Phase:** 3 — End-to-End Orchestration Pipeline  
-**Slice:** 3F — Operational Reporting  
+**Status:** Approved for implementation
+**Phase:** 3 — End-to-End Orchestration Pipeline
+**Slice:** 3F — Operational Reporting
 
 ## 1. Purpose
 
