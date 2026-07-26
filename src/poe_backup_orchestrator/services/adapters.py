@@ -16,6 +16,9 @@ from poe_backup_orchestrator.models import (
 from poe_backup_orchestrator.services.registry_acceptance import (
     accept_registry_acquisition,
 )
+from poe_backup_orchestrator.services.registry_acquisition import (
+    create_registry_acquisition,
+)
 from poe_backup_orchestrator.services.registry_ingestion import (
     validate_registry_acquisition,
 )
@@ -23,7 +26,6 @@ from poe_backup_orchestrator.services.repository_validation import (
     DEFAULT_REPOSITORY_COMMAND,
     validate_repository,
 )
-from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 RepositoryValidator = Callable[[Sequence[str]], RepositoryValidationResult]
 AcquisitionCreator = Callable[..., SqliteBackupResult]
@@ -55,7 +57,7 @@ class RegistryAcquisitionAdapter:
     staging_root: Path
     asset_id: str
     clock: Clock
-    creator: AcquisitionCreator = create_sqlite_backup
+    creator: AcquisitionCreator = create_registry_acquisition
 
     def acquire(self) -> SqliteBackupResult:
         """Delegate Registry acquisition without changing its result."""

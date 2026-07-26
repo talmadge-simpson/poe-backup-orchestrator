@@ -159,3 +159,109 @@ def test_validate_repository_command_reports_failure(
 
     assert exit_code == 1
     assert "Result: FAIL" in captured.out
+
+
+def test_run_command_delegates_to_run_service(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    """Confirm CLI forwards runtime paths and prints published evidence."""
+    from dataclasses import dataclass
+
+    from poe_backup_orchestrator.models.operational_report import (
+        OperationalReportPublication,
+    )
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    source = tmp_path / "registry.sqlite3"
+    source.touch()
+    received = {}
+
+    @dataclass
+    class FakeRunResult:
+        summary: str
+        publication: OperationalReportPublication
+        exit_code: int
+
+    class FakeService:
+        def execute(self, request):
+            received["request"] = request
+            return FakeRunResult(
+                summary="POE Backup Orchestrator — Registry Backup Report\nOutcome: succeeded\n",
+                publication=OperationalReportPublication(
+                    json_path=Path("/reports/report.json"),
+                    summary_path=Path("/reports/report.txt"),
+                ),
+                exit_code=0,
+            )
+
+    def fake_builder(**kwargs):
+        received.update(kwargs)
+        return FakeService()
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.build_registry_backup_run_service",
+        fake_builder,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "run",
+            "--source",
+            str(source),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert received["source_path"] == source
+    assert received["staging_root"] == Path("/tmp/staging")
+    assert received["reports_root"] == Path("/tmp/reports/Backup-Orchestrator")
+    assert received["destination_root"] == Path("/tmp/repository/Registry/POERegistry")
+    assert received["asset_id"] == "poeregistry"
+    assert received["request"].source_path == source
+    assert "Outcome: succeeded" in captured.out
+    assert "JSON report: /reports/report.json" in captured.out
+    assert "Text report: /reports/report.txt" in captured.out
+
+
+def test_run_command_returns_reporting_failure_exit_code(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    """Confirm report publication failure returns the stable CLI exit code."""
+    from poe_backup_orchestrator.exceptions import OperationalReportingError
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    source = tmp_path / "registry.sqlite3"
+    source.touch()
+
+    class FakeService:
+        def execute(self, request):
+            del request
+            raise OperationalReportingError("publication failed")
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.build_registry_backup_run_service",
+        lambda **kwargs: FakeService(),
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "run",
+            "--source",
+            str(source),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 60
+    assert "publication failed" in captured.err
