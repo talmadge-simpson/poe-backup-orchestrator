@@ -17,6 +17,7 @@ from poe_backup_orchestrator.exceptions import (
 from poe_backup_orchestrator.models import RegistryBackupRequest
 from poe_backup_orchestrator.services import (
     REPORTING_FAILURE_EXIT_CODE,
+    OperationalAcceptanceService,
     build_registry_backup_run_service,
     create_sqlite_backup,
     validate_repository,
@@ -80,6 +81,18 @@ def build_parser() -> argparse.ArgumentParser:
             "Accepted Registry destination root (default: <repository_root>/Registry/POERegistry)."
         ),
     )
+
+    acceptance_parser = subparsers.add_parser(
+        "acceptance-run",
+        help="Execute and verify an end-to-end operational acceptance run.",
+    )
+    acceptance_parser.add_argument("--source", required=True, type=Path)
+    acceptance_parser.add_argument(
+        "--asset-id",
+        default=DEFAULT_REGISTRY_ASSET_ID,
+    )
+    acceptance_parser.add_argument("--destination-root", type=Path, default=None)
+    acceptance_parser.add_argument("--evidence-root", type=Path, default=None)
     return parser
 
 
@@ -168,6 +181,34 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"JSON report: {run_result.publication.json_path}")
             print(f"Text report: {run_result.publication.summary_path}")
             return run_result.exit_code
+
+        if arguments.command == "acceptance-run":
+            destination_root = arguments.destination_root
+            if destination_root is None:
+                destination_root = context.config.paths.repository_root / "Registry" / "POERegistry"
+            evidence_root = arguments.evidence_root
+            if evidence_root is None:
+                evidence_root = (
+                    context.config.paths.reports_root / "Backup-Orchestrator" / "Acceptance"
+                )
+            run_service = build_registry_backup_run_service(
+                source_path=arguments.source,
+                staging_root=context.config.paths.staging_root,
+                reports_root=context.config.paths.reports_root / "Backup-Orchestrator",
+                destination_root=destination_root,
+                asset_id=arguments.asset_id,
+            )
+            acceptance_service = OperationalAcceptanceService(
+                run_service=run_service,
+                evidence_root=evidence_root,
+                clock=run_service.clock,
+                repository_validator=validate_repository,
+            )
+            result = acceptance_service.execute(RegistryBackupRequest(source_path=arguments.source))
+            print(result.summary, end="")
+            print(f"Acceptance JSON: {result.publication.json_path}")
+            print(f"Acceptance text: {result.publication.summary_path}")
+            return result.evidence.exit_code
 
     except OperationalReportingError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

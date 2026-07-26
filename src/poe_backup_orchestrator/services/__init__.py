@@ -21,6 +21,12 @@ from poe_backup_orchestrator.services.failure_mapping import (
     FailurePolicy,
     map_operational_failure,
 )
+from poe_backup_orchestrator.services.operational_acceptance import (
+    ACCEPTANCE_FAILURE_EXIT_CODE,
+    OperationalAcceptanceService,
+    publish_operational_acceptance,
+    render_operational_acceptance_summary,
+)
 from poe_backup_orchestrator.services.operational_reporting import (
     build_operational_report,
     publish_operational_report,
@@ -55,6 +61,10 @@ from poe_backup_orchestrator.services.run_service import (
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 __all__ = [
+    "render_operational_acceptance_summary",
+    "publish_operational_acceptance",
+    "OperationalAcceptanceService",
+    "ACCEPTANCE_FAILURE_EXIT_CODE",
     "create_registry_acquisition",
     "build_registry_backup_run_service",
     "SystemUtcClock",

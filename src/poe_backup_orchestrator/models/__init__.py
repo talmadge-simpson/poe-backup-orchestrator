@@ -14,6 +14,16 @@ from poe_backup_orchestrator.models.job import (
     JobIdGenerator,
     RegistryBackupRequest,
 )
+from poe_backup_orchestrator.models.operational_acceptance import (
+    ACCEPTANCE_SCHEMA_NAME,
+    ACCEPTANCE_SCHEMA_VERSION,
+    AcceptanceCheck,
+    FileEvidence,
+    OperationalAcceptanceEvidence,
+    OperationalAcceptancePublication,
+    OperationalAcceptanceResult,
+    OperationalAcceptanceStatus,
+)
 from poe_backup_orchestrator.models.operational_report import (
     REPORT_SCHEMA_NAME,
     REPORT_SCHEMA_VERSION,
@@ -31,6 +41,14 @@ from poe_backup_orchestrator.models.repository import RepositoryValidationResult
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
 
 __all__ = [
+    "OperationalAcceptanceStatus",
+    "OperationalAcceptanceResult",
+    "OperationalAcceptancePublication",
+    "OperationalAcceptanceEvidence",
+    "FileEvidence",
+    "AcceptanceCheck",
+    "ACCEPTANCE_SCHEMA_VERSION",
+    "ACCEPTANCE_SCHEMA_NAME",
     "RegistryAcceptanceResult",
     "RegistryAcceptanceStatus",
     "RegistryIngestionResult",
