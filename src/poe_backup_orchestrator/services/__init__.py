@@ -33,6 +33,9 @@ from poe_backup_orchestrator.services.orchestrator import (
 from poe_backup_orchestrator.services.registry_acceptance import (
     accept_registry_acquisition,
 )
+from poe_backup_orchestrator.services.registry_acquisition import (
+    create_registry_acquisition,
+)
 from poe_backup_orchestrator.services.registry_ingestion import (
     validate_registry_acquisition,
 )
@@ -40,9 +43,26 @@ from poe_backup_orchestrator.services.repository_validation import (
     DEFAULT_REPOSITORY_COMMAND,
     validate_repository,
 )
+from poe_backup_orchestrator.services.run_service import (
+    REPORTING_FAILURE_EXIT_CODE,
+    RegistryBackupRunResult,
+    RegistryBackupRunService,
+    RepositoryReadinessGuard,
+    SecureJobIdGenerator,
+    SystemUtcClock,
+    build_registry_backup_run_service,
+)
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 __all__ = [
+    "create_registry_acquisition",
+    "build_registry_backup_run_service",
+    "SystemUtcClock",
+    "SecureJobIdGenerator",
+    "RepositoryReadinessGuard",
+    "RegistryBackupRunService",
+    "RegistryBackupRunResult",
+    "REPORTING_FAILURE_EXIT_CODE",
     "AcquisitionValidationAdapter",
     "AcquisitionValidationService",
     "DEFAULT_REPOSITORY_COMMAND",

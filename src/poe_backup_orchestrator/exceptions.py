@@ -39,3 +39,7 @@ class RegistryAcceptanceConflictError(RegistryAcceptanceError):
 
 class RegistryAcceptanceInconsistentError(RegistryAcceptanceError):
     """Raised when an existing acceptance destination is incomplete or polluted."""
+
+
+class OperationalReportingError(OrchestratorError):
+    """Raised when an operational report cannot be durably published."""
