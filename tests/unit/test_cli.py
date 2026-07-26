@@ -265,3 +265,96 @@ def test_run_command_returns_reporting_failure_exit_code(
 
     assert exit_code == 60
     assert "publication failed" in captured.err
+
+
+def test_acceptance_run_command_delegates_and_returns_status(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    "Confirm CLI delegates operational acceptance and exposes evidence."
+    from dataclasses import dataclass
+    from datetime import UTC, datetime
+
+    from poe_backup_orchestrator.models.operational_acceptance import (
+        FileEvidence,
+        OperationalAcceptanceEvidence,
+        OperationalAcceptancePublication,
+        OperationalAcceptanceStatus,
+    )
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    source = tmp_path / "registry.sqlite3"
+    source.write_bytes(b"source")
+    received = {}
+
+    class FakeRunService:
+        clock = object()
+
+    @dataclass
+    class FakeResult:
+        evidence: OperationalAcceptanceEvidence
+        publication: OperationalAcceptancePublication
+        summary: str
+
+    class FakeAcceptanceService:
+        def __init__(self, **kwargs):
+            received.update(kwargs)
+
+        def execute(self, request):
+            received["request"] = request
+            file_evidence = FileEvidence(source, source.stat().st_size, "0" * 64)
+            evidence = OperationalAcceptanceEvidence(
+                "schema",
+                "1.0",
+                "0.1.0",
+                datetime(2026, 7, 26, tzinfo=UTC),
+                "job-cli",
+                OperationalAcceptanceStatus.PASSED,
+                0,
+                file_evidence,
+                file_evidence,
+                file_evidence,
+                file_evidence,
+                file_evidence,
+                file_evidence,
+                {},
+                {},
+                (),
+                (),
+            )
+            return FakeResult(
+                evidence,
+                OperationalAcceptancePublication(
+                    Path("/evidence/acceptance.json"),
+                    Path("/evidence/acceptance.txt"),
+                ),
+                "Status: passed\n",
+            )
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.build_registry_backup_run_service",
+        lambda **kwargs: FakeRunService(),
+    )
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.OperationalAcceptanceService",
+        FakeAcceptanceService,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "acceptance-run",
+            "--source",
+            str(source),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert received["request"].source_path == source
+    assert received["evidence_root"] == Path("/tmp/reports/Backup-Orchestrator/Acceptance")
+    assert "Status: passed" in captured.out
+    assert "Acceptance JSON: /evidence/acceptance.json" in captured.out
