@@ -17,6 +17,10 @@ from poe_backup_orchestrator.services.execution_state_machine import (
     ExecutionTransition,
     InvalidExecutionTransitionError,
 )
+from poe_backup_orchestrator.services.orchestrator import (
+    RegistryBackupOrchestrator,
+    StateMachineFactory,
+)
 from poe_backup_orchestrator.services.registry_acceptance import (
     accept_registry_acquisition,
 )
@@ -42,6 +46,8 @@ __all__ = [
     "RegistryAcquisitionService",
     "RepositoryValidationAdapter",
     "RepositoryValidationService",
+    "StateMachineFactory",
+    "RegistryBackupOrchestrator",
     "accept_registry_acquisition",
     "create_sqlite_backup",
     "validate_registry_acquisition",
