@@ -14,6 +14,14 @@ from poe_backup_orchestrator.models.job import (
     JobIdGenerator,
     RegistryBackupRequest,
 )
+from poe_backup_orchestrator.models.operational_report import (
+    REPORT_SCHEMA_NAME,
+    REPORT_SCHEMA_VERSION,
+    OperationalEvidenceReport,
+    OperationalFailureReport,
+    OperationalReport,
+    OperationalReportPublication,
+)
 from poe_backup_orchestrator.models.registry_acceptance import (
     RegistryAcceptanceResult,
     RegistryAcceptanceStatus,
@@ -41,5 +49,11 @@ __all__ += [
     "JobId",
     "JobIdGenerator",
     "RegistryBackupExecutionResult",
+    "REPORT_SCHEMA_NAME",
+    "REPORT_SCHEMA_VERSION",
+    "OperationalEvidenceReport",
+    "OperationalFailureReport",
+    "OperationalReport",
+    "OperationalReportPublication",
     "RegistryBackupRequest",
 ]
