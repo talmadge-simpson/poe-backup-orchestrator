@@ -6,3 +6,7 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+# Temporary implementation helpers
+apply_*.py
+repair_*.py
+*_review.txt

@@ -1,4 +1,4 @@
-"""Atomic and idempotent promotion of validated Registry artifacts."""
+"""Atomic, idempotent, and serialized promotion of validated Registry artifacts."""
 
 from __future__ import annotations
 
@@ -12,12 +12,21 @@ from poe_backup_orchestrator.exceptions import (
     RegistryAcceptanceConflictError,
     RegistryAcceptanceError,
     RegistryAcceptanceInconsistentError,
+    RegistryAcceptanceLockError,
 )
 from poe_backup_orchestrator.models.registry_acceptance import (
     RegistryAcceptanceResult,
     RegistryAcceptanceStatus,
 )
 from poe_backup_orchestrator.models.registry_ingestion import RegistryIngestionResult
+from poe_backup_orchestrator.utilities.locking import (
+    LockContentionError,
+    LockingError,
+    exclusive_file_lock,
+)
+
+_LOCK_DIRECTORY_NAME = ".locks"
+_LOCK_FILE_NAME = "registry-acceptance.lock"
 
 
 def _derive_run_id(created_at: str) -> str:
@@ -160,35 +169,15 @@ def _classify_existing_destination(
     )
 
 
-def accept_registry_acquisition(
+def _accept_under_lock(
     ingestion_result: RegistryIngestionResult,
     destination_root: Path,
+    run_id: str,
+    source_snapshot: Path,
+    source_manifest: Path,
 ) -> RegistryAcceptanceResult:
-    """Promote a validated acquisition into the managed repository.
+    """Inspect and publish one validated acquisition while holding the lock."""
 
-    New acquisitions are atomically published. Exact duplicates return
-    idempotent success without rewriting accepted files. Conflicting or
-    inconsistent destinations are rejected. Source artifacts remain unchanged.
-    """
-
-    destination_root = destination_root.resolve()
-    if not destination_root.exists():
-        raise RegistryAcceptanceError(
-            f"Registry destination root does not exist: {destination_root}"
-        )
-    if not destination_root.is_dir():
-        raise RegistryAcceptanceError(
-            f"Registry destination root is not a directory: {destination_root}"
-        )
-
-    source_snapshot = ingestion_result.snapshot_path.resolve()
-    source_manifest = ingestion_result.manifest_path.resolve()
-    if not source_snapshot.is_file():
-        raise RegistryAcceptanceError(f"Validated snapshot no longer exists: {source_snapshot}")
-    if not source_manifest.is_file():
-        raise RegistryAcceptanceError(f"Validated manifest no longer exists: {source_manifest}")
-
-    run_id = _derive_run_id(ingestion_result.created_at)
     destination_directory = destination_root / run_id
     snapshot_path = destination_directory / source_snapshot.name
     manifest_path = destination_directory / source_manifest.name
@@ -248,3 +237,54 @@ def accept_registry_acquisition(
         manifest_path,
         RegistryAcceptanceStatus.ACCEPTED,
     )
+
+
+def accept_registry_acquisition(
+    ingestion_result: RegistryIngestionResult,
+    destination_root: Path,
+) -> RegistryAcceptanceResult:
+    """Promote a validated acquisition into the managed repository.
+
+    The repository-wide acceptance lock serializes inspection and publication.
+    New acquisitions are atomically published. Exact duplicates return
+    idempotent success without rewriting accepted files. Conflicting or
+    inconsistent destinations are rejected. Source artifacts remain unchanged.
+    """
+
+    destination_root = destination_root.resolve()
+    if not destination_root.exists():
+        raise RegistryAcceptanceError(
+            f"Registry destination root does not exist: {destination_root}"
+        )
+    if not destination_root.is_dir():
+        raise RegistryAcceptanceError(
+            f"Registry destination root is not a directory: {destination_root}"
+        )
+
+    source_snapshot = ingestion_result.snapshot_path.resolve()
+    source_manifest = ingestion_result.manifest_path.resolve()
+    if not source_snapshot.is_file():
+        raise RegistryAcceptanceError(f"Validated snapshot no longer exists: {source_snapshot}")
+    if not source_manifest.is_file():
+        raise RegistryAcceptanceError(f"Validated manifest no longer exists: {source_manifest}")
+
+    run_id = _derive_run_id(ingestion_result.created_at)
+    lock_path = destination_root / _LOCK_DIRECTORY_NAME / _LOCK_FILE_NAME
+
+    try:
+        with exclusive_file_lock(lock_path):
+            return _accept_under_lock(
+                ingestion_result,
+                destination_root,
+                run_id,
+                source_snapshot,
+                source_manifest,
+            )
+    except LockContentionError as exc:
+        raise RegistryAcceptanceLockError(
+            f"Registry acceptance is already active for repository: {destination_root}"
+        ) from exc
+    except LockingError as exc:
+        raise RegistryAcceptanceLockError(
+            f"Registry acceptance lock failed for repository {destination_root}: {exc}"
+        ) from exc
