@@ -29,6 +29,10 @@ class RegistryAcceptanceError(OrchestratorError):
     """Raised when a Registry acquisition cannot be accepted."""
 
 
+class RegistryAcceptanceLockError(RegistryAcceptanceError):
+    """Raised when Registry acceptance cannot acquire its repository lock."""
+
+
 class RegistryAcceptanceConflictError(RegistryAcceptanceError):
     """Raised when an accepted run conflicts with a validated acquisition."""
 

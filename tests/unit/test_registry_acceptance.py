@@ -13,6 +13,7 @@ from poe_backup_orchestrator.exceptions import (
     RegistryAcceptanceConflictError,
     RegistryAcceptanceError,
     RegistryAcceptanceInconsistentError,
+    RegistryAcceptanceLockError,
 )
 from poe_backup_orchestrator.models.registry_acceptance import (
     RegistryAcceptanceStatus,
@@ -23,6 +24,7 @@ from poe_backup_orchestrator.services.registry_acceptance import (
 from poe_backup_orchestrator.services.registry_ingestion import (
     validate_registry_acquisition,
 )
+from poe_backup_orchestrator.utilities.locking import exclusive_file_lock
 
 
 def _sha256_file(path: Path) -> str:
@@ -345,3 +347,77 @@ def test_accept_registry_acquisition_publishes_only_expected_files(
         snapshot_path.name,
         manifest_path.name,
     }
+
+
+def test_accept_registry_acquisition_creates_repository_lock_file(
+    tmp_path: Path,
+) -> None:
+    manifest_path, _ = _create_valid_acquisition(tmp_path)
+    destination_root = tmp_path / "repository"
+    destination_root.mkdir()
+
+    ingestion_result = validate_registry_acquisition(manifest_path)
+    accept_registry_acquisition(ingestion_result, destination_root)
+
+    assert (destination_root / ".locks" / "registry-acceptance.lock").is_file()
+
+
+def test_accept_registry_acquisition_rejects_concurrent_execution(
+    tmp_path: Path,
+) -> None:
+    manifest_path, _ = _create_valid_acquisition(tmp_path)
+    destination_root = tmp_path / "repository"
+    destination_root.mkdir()
+    ingestion_result = validate_registry_acquisition(manifest_path)
+    lock_path = destination_root / ".locks" / "registry-acceptance.lock"
+
+    with exclusive_file_lock(lock_path):
+        with pytest.raises(
+            RegistryAcceptanceLockError,
+            match="already active",
+        ):
+            accept_registry_acquisition(ingestion_result, destination_root)
+
+
+def test_accept_registry_acquisition_reuses_stale_lock_file(
+    tmp_path: Path,
+) -> None:
+    manifest_path, _ = _create_valid_acquisition(tmp_path)
+    destination_root = tmp_path / "repository"
+    destination_root.mkdir()
+    lock_path = destination_root / ".locks" / "registry-acceptance.lock"
+    lock_path.parent.mkdir()
+    lock_path.write_text("stale metadata\n", encoding="utf-8")
+
+    ingestion_result = validate_registry_acquisition(manifest_path)
+    result = accept_registry_acquisition(ingestion_result, destination_root)
+
+    assert result.status is RegistryAcceptanceStatus.ACCEPTED
+
+
+def test_accept_registry_acquisition_releases_lock_after_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    manifest_path, _ = _create_valid_acquisition(tmp_path)
+    destination_root = tmp_path / "repository"
+    destination_root.mkdir()
+    ingestion_result = validate_registry_acquisition(manifest_path)
+    lock_path = destination_root / ".locks" / "registry-acceptance.lock"
+
+    def incorrect_hash(_: Path) -> str:
+        return "0" * 64
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.services.registry_acceptance._sha256_file",
+        incorrect_hash,
+    )
+
+    with pytest.raises(
+        RegistryAcceptanceError,
+        match="SHA-256 verification failed",
+    ):
+        accept_registry_acquisition(ingestion_result, destination_root)
+
+    with exclusive_file_lock(lock_path):
+        pass
