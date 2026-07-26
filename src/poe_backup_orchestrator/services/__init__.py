@@ -21,6 +21,11 @@ from poe_backup_orchestrator.services.failure_mapping import (
     FailurePolicy,
     map_operational_failure,
 )
+from poe_backup_orchestrator.services.operational_reporting import (
+    build_operational_report,
+    publish_operational_report,
+    render_operational_summary,
+)
 from poe_backup_orchestrator.services.orchestrator import (
     RegistryBackupOrchestrator,
     StateMachineFactory,
@@ -57,5 +62,8 @@ __all__ = [
     "accept_registry_acquisition",
     "create_sqlite_backup",
     "validate_registry_acquisition",
+    "build_operational_report",
+    "publish_operational_report",
+    "render_operational_summary",
     "validate_repository",
 ]
