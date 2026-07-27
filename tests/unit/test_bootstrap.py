@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from poe_backup_orchestrator.bootstrap import bootstrap_application
+from poe_backup_orchestrator.models.runtime import RuntimeEnvironment
 
 
 def test_bootstrap_returns_application_context(tmp_path: Path) -> None:
@@ -28,5 +29,5 @@ quarantine_root = "/tmp/quarantine"
     context = bootstrap_application(config_path)
 
     assert context.config_path == config_path
-    assert context.config.application.environment == "test"
+    assert context.config.application.environment is RuntimeEnvironment.TEST
     assert context.config.paths.repository_root == Path("/tmp/repository")

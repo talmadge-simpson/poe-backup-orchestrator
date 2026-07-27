@@ -6,6 +6,7 @@ import pytest
 
 from poe_backup_orchestrator.config import load_configuration
 from poe_backup_orchestrator.exceptions import ConfigurationError
+from poe_backup_orchestrator.models.runtime import RuntimeEnvironment
 
 
 def test_load_configuration_returns_typed_model(tmp_path: Path) -> None:
@@ -31,7 +32,7 @@ quarantine_root = "/srv/test/Quarantine"
     config = load_configuration(config_path)
 
     assert config.application.name == "poe-backup-orchestrator"
-    assert config.application.environment == "test"
+    assert config.application.environment is RuntimeEnvironment.TEST
     assert config.paths.repository_root == Path("/srv/test")
 
 

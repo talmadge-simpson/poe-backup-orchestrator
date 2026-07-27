@@ -10,3 +10,10 @@ dist/
 apply_*.py
 repair_*.py
 *_review.txt
+
+# Local development runtime
+.runtime/*
+!.runtime/state/
+!.runtime/log/
+!.runtime/state/.gitkeep
+!.runtime/log/.gitkeep

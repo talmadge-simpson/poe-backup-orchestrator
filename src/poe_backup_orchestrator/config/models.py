@@ -5,19 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+from poe_backup_orchestrator.models.runtime import RuntimeEnvironment
+
 
 @dataclass(frozen=True)
 class ApplicationConfig:
-    """Application identity and environment settings."""
-
     name: str
-    environment: str
+    environment: RuntimeEnvironment
 
 
 @dataclass(frozen=True)
 class PathConfig:
-    """Filesystem paths used by the orchestrator."""
-
     repository_root: Path
     staging_root: Path
     reports_root: Path
@@ -28,7 +26,5 @@ class PathConfig:
 
 @dataclass(frozen=True)
 class OrchestratorConfig:
-    """Complete validated application configuration."""
-
     application: ApplicationConfig
     paths: PathConfig

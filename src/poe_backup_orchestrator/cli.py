@@ -14,7 +14,7 @@ from poe_backup_orchestrator.exceptions import (
     OrchestratorError,
     RepositoryValidationError,
 )
-from poe_backup_orchestrator.models import RegistryBackupRequest
+from poe_backup_orchestrator.models import RegistryBackupRequest, RuntimeEnvironment
 from poe_backup_orchestrator.services import (
     REPORTING_FAILURE_EXIT_CODE,
     OperationalAcceptanceService,
@@ -40,8 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config",
         type=Path,
-        default=DEFAULT_CONFIG_PATH,
-        help=f"Path to the orchestrator TOML configuration file (default: {DEFAULT_CONFIG_PATH})",
+        default=None,
+        help="Explicit path to the orchestrator TOML configuration file.",
+    )
+    parser.add_argument(
+        "--environment",
+        choices=[item.value for item in RuntimeEnvironment],
+        default=None,
+        help="Explicit runtime environment; it must match the configuration.",
     )
 
     subparsers = parser.add_subparsers(dest="command")
@@ -133,12 +139,23 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     try:
-        context = bootstrap_application(arguments.config)
+        requested_environment = (
+            None
+            if arguments.environment is None
+            else RuntimeEnvironment.parse(arguments.environment)
+        )
+        context = bootstrap_application(
+            arguments.config,
+            environment=requested_environment,
+        )
 
         if arguments.command == "status":
             print("POE Backup Orchestrator")
             print(f"Version: {__version__}")
-            print(f"Environment: {context.config.application.environment}")
+            print(f"Environment: {context.config.application.environment.value}")
+            print(f"Configuration: {context.config_path}")
+            print(f"State root: {context.runtime.state_root}")
+            print(f"Log root: {context.runtime.log_root}")
             print(f"Repository: {context.config.paths.repository_root}")
             print("State: BOOTSTRAP_READY")
             return 0
