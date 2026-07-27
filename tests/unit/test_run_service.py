@@ -138,3 +138,49 @@ def test_secure_job_id_is_filename_safe_and_unique() -> None:
     assert str(first).startswith("20260726T180000000000Z-")
     assert "/" not in str(first)
     assert first != second
+
+
+def test_builder_composes_runtime_lifecycle_into_orchestrator(
+    tmp_path: Path,
+) -> None:
+    """Confirm the production builder owns the complete runtime service graph."""
+    from poe_backup_orchestrator.models import RuntimeEnvironment
+    from poe_backup_orchestrator.services import build_registry_backup_run_service
+    from poe_backup_orchestrator.services.runtime_lifecycle import (
+        RuntimeLifecycleCoordinator,
+    )
+    from poe_backup_orchestrator.services.runtime_recovery import (
+        RuntimeRecoveryInspector,
+        SystemHostIdentity,
+        SystemProcessLiveness,
+    )
+    from poe_backup_orchestrator.services.runtime_state_store import RuntimeStateStore
+
+    clock = FixedClock()
+    service = build_registry_backup_run_service(
+        source_path=tmp_path / "registry.sqlite3",
+        staging_root=tmp_path / "staging",
+        reports_root=tmp_path / "reports",
+        destination_root=tmp_path / "repository",
+        asset_id="poeregistry",
+        state_root=tmp_path / "state",
+        environment=RuntimeEnvironment.TEST,
+        clock=clock,
+    )
+
+    lifecycle = service.orchestrator.runtime_lifecycle
+
+    assert isinstance(lifecycle, RuntimeLifecycleCoordinator)
+    assert isinstance(lifecycle.store, RuntimeStateStore)
+    assert isinstance(lifecycle.recovery_inspector, RuntimeRecoveryInspector)
+    assert isinstance(lifecycle.host_identity, SystemHostIdentity)
+    assert isinstance(
+        lifecycle.recovery_inspector.process_liveness,
+        SystemProcessLiveness,
+    )
+    assert lifecycle.recovery_inspector.store is lifecycle.store
+    assert lifecycle.recovery_inspector.host_identity is lifecycle.host_identity
+    assert lifecycle.recovery_inspector.clock is clock
+    assert lifecycle.clock is clock
+    assert lifecycle.environment is RuntimeEnvironment.TEST
+    assert service.clock is clock

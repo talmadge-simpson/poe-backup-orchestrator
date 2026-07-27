@@ -24,6 +24,7 @@ from poe_backup_orchestrator.models.operational_report import (
     OperationalReport,
     OperationalReportPublication,
 )
+from poe_backup_orchestrator.models.runtime import RuntimeEnvironment
 from poe_backup_orchestrator.services.adapters import (
     AcquisitionValidationAdapter,
     RegistryAcceptanceAdapter,
@@ -36,6 +37,15 @@ from poe_backup_orchestrator.services.operational_reporting import (
     render_operational_summary,
 )
 from poe_backup_orchestrator.services.orchestrator import RegistryBackupOrchestrator
+from poe_backup_orchestrator.services.runtime_lifecycle import (
+    RuntimeLifecycleCoordinator,
+)
+from poe_backup_orchestrator.services.runtime_recovery import (
+    RuntimeRecoveryInspector,
+    SystemHostIdentity,
+    SystemProcessLiveness,
+)
+from poe_backup_orchestrator.services.runtime_state_store import RuntimeStateStore
 
 REPORTING_FAILURE_EXIT_CODE = 60
 
@@ -153,6 +163,8 @@ def build_registry_backup_run_service(
     reports_root: Path,
     destination_root: Path,
     asset_id: str,
+    state_root: Path,
+    environment: RuntimeEnvironment,
     clock: Clock | None = None,
     job_id_generator: JobIdGenerator | None = None,
 ) -> RegistryBackupRunService:
@@ -160,6 +172,21 @@ def build_registry_backup_run_service(
 
     runtime_clock = clock or SystemUtcClock()
     runtime_job_id_generator = job_id_generator or SecureJobIdGenerator()
+    runtime_store = RuntimeStateStore(state_root)
+    host_identity = SystemHostIdentity()
+    recovery_inspector = RuntimeRecoveryInspector(
+        store=runtime_store,
+        host_identity=host_identity,
+        process_liveness=SystemProcessLiveness(),
+        clock=runtime_clock,
+    )
+    runtime_lifecycle = RuntimeLifecycleCoordinator(
+        store=runtime_store,
+        recovery_inspector=recovery_inspector,
+        host_identity=host_identity,
+        clock=runtime_clock,
+        environment=environment,
+    )
 
     orchestrator = RegistryBackupOrchestrator(
         repository_validation=RepositoryReadinessGuard(RepositoryValidationAdapter()),
@@ -175,6 +202,7 @@ def build_registry_backup_run_service(
         ),
         clock=runtime_clock,
         job_id_generator=runtime_job_id_generator,
+        runtime_lifecycle=runtime_lifecycle,
     )
 
     return RegistryBackupRunService(
