@@ -386,7 +386,7 @@ Exceptions should be added to the existing exception hierarchy rather than creat
 Expected additions or modifications include:
 
 ```text
-src/poe_backup_orchestrator/models/runtime_state.py
+src/poe_backup_orchestrator/models/runtime.py
 src/poe_backup_orchestrator/services/runtime_state_store.py
 src/poe_backup_orchestrator/services/runtime_recovery.py
 src/poe_backup_orchestrator/services/orchestrator.py

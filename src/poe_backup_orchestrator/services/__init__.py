@@ -58,6 +58,10 @@ from poe_backup_orchestrator.services.run_service import (
     SystemUtcClock,
     build_registry_backup_run_service,
 )
+from poe_backup_orchestrator.services.runtime_state_store import (
+    RUNTIME_STATE_FILENAME,
+    RuntimeStateStore,
+)
 from poe_backup_orchestrator.services.runtime_validation import (
     require_valid_runtime,
     validate_runtime,
@@ -65,6 +69,8 @@ from poe_backup_orchestrator.services.runtime_validation import (
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 __all__ = [
+    "RuntimeStateStore",
+    "RUNTIME_STATE_FILENAME",
     "render_operational_acceptance_summary",
     "publish_operational_acceptance",
     "OperationalAcceptanceService",
