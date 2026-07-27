@@ -16,6 +16,7 @@ from poe_backup_orchestrator.exceptions import (
     RegistryAcceptanceLockError,
     RegistryIngestionError,
     RepositoryValidationError,
+    RuntimeStateOwnershipError,
     SqliteBackupError,
 )
 from poe_backup_orchestrator.models import (
@@ -388,6 +389,80 @@ def test_state_machine_factory_failure_propagates_unchanged() -> None:
     )
 
     with pytest.raises(RuntimeError) as raised:
+        orchestrator.execute(REQUEST)
+
+    assert raised.value is expected
+    assert events == []
+
+
+class RecordingRuntimeLifecycle:
+    """Record orchestration lifecycle persistence calls."""
+
+    def __init__(self, error: Exception | None = None) -> None:
+        self.error = error
+        self.calls: list[tuple[object, ...]] = []
+
+    def start(self, job_id: JobId, started_at_utc: datetime) -> object:
+        self.calls.append(("start", job_id, started_at_utc))
+        if self.error is not None:
+            raise self.error
+        return object()
+
+    def transition_to(self, execution_state: ExecutionState) -> object:
+        self.calls.append(("transition", execution_state))
+        return object()
+
+
+def test_runtime_lifecycle_observes_successful_orchestration() -> None:
+    events: list[str] = []
+    lifecycle = RecordingRuntimeLifecycle()
+    orchestrator, *_ = build_orchestrator(events=events)
+    object.__setattr__(orchestrator, "runtime_lifecycle", lifecycle)
+
+    result = orchestrator.execute(REQUEST)
+
+    assert result.outcome is ExecutionOutcome.SUCCEEDED
+    assert lifecycle.calls == [
+        ("start", REQUEST.job_id, REQUEST.requested_at_utc),
+        ("transition", ExecutionState.LOCK_ACQUISITION),
+        ("transition", ExecutionState.REPOSITORY_VALIDATION),
+        ("transition", ExecutionState.REGISTRY_ACQUISITION),
+        ("transition", ExecutionState.ACQUISITION_VALIDATION),
+        ("transition", ExecutionState.REGISTRY_ACCEPTANCE),
+        ("transition", ExecutionState.REPORT_GENERATION),
+        ("transition", ExecutionState.COMPLETED),
+    ]
+
+
+def test_runtime_lifecycle_observes_controlled_failure() -> None:
+    events: list[str] = []
+    lifecycle = RecordingRuntimeLifecycle()
+    orchestrator, *_ = build_orchestrator(
+        events=events,
+        repository_error=RepositoryValidationError("unavailable"),
+        clock=orchestration_clock(failure=True),
+    )
+    object.__setattr__(orchestrator, "runtime_lifecycle", lifecycle)
+
+    result = orchestrator.execute(REQUEST)
+
+    assert result.outcome is ExecutionOutcome.FAILED
+    assert lifecycle.calls == [
+        ("start", REQUEST.job_id, REQUEST.requested_at_utc),
+        ("transition", ExecutionState.LOCK_ACQUISITION),
+        ("transition", ExecutionState.REPOSITORY_VALIDATION),
+        ("transition", ExecutionState.FAILED),
+    ]
+
+
+def test_runtime_start_failure_prevents_operational_work() -> None:
+    events: list[str] = []
+    expected = RuntimeStateOwnershipError("active execution")
+    lifecycle = RecordingRuntimeLifecycle(error=expected)
+    orchestrator, *_ = build_orchestrator(events=events)
+    object.__setattr__(orchestrator, "runtime_lifecycle", lifecycle)
+
+    with pytest.raises(RuntimeStateOwnershipError) as raised:
         orchestrator.execute(REQUEST)
 
     assert raised.value is expected

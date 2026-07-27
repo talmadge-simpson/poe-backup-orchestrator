@@ -34,6 +34,7 @@ from poe_backup_orchestrator.services.operational_reporting import (
 )
 from poe_backup_orchestrator.services.orchestrator import (
     RegistryBackupOrchestrator,
+    RuntimeLifecycle,
     StateMachineFactory,
 )
 from poe_backup_orchestrator.services.registry_acceptance import (
@@ -58,6 +59,20 @@ from poe_backup_orchestrator.services.run_service import (
     SystemUtcClock,
     build_registry_backup_run_service,
 )
+from poe_backup_orchestrator.services.runtime_lifecycle import (
+    RuntimeLifecycleCoordinator,
+)
+from poe_backup_orchestrator.services.runtime_recovery import (
+    RuntimeRecoveryInspection,
+    RuntimeRecoveryInspector,
+    RuntimeRecoveryOutcome,
+    SystemHostIdentity,
+    SystemProcessLiveness,
+)
+from poe_backup_orchestrator.services.runtime_state_store import (
+    RUNTIME_STATE_FILENAME,
+    RuntimeStateStore,
+)
 from poe_backup_orchestrator.services.runtime_validation import (
     require_valid_runtime,
     validate_runtime,
@@ -65,6 +80,15 @@ from poe_backup_orchestrator.services.runtime_validation import (
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 __all__ = [
+    "RuntimeLifecycleCoordinator",
+    "RuntimeLifecycle",
+    "SystemProcessLiveness",
+    "SystemHostIdentity",
+    "RuntimeRecoveryOutcome",
+    "RuntimeRecoveryInspector",
+    "RuntimeRecoveryInspection",
+    "RuntimeStateStore",
+    "RUNTIME_STATE_FILENAME",
     "render_operational_acceptance_summary",
     "publish_operational_acceptance",
     "OperationalAcceptanceService",

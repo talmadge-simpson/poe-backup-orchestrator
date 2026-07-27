@@ -43,3 +43,23 @@ class RegistryAcceptanceInconsistentError(RegistryAcceptanceError):
 
 class OperationalReportingError(OrchestratorError):
     """Raised when an operational report cannot be durably published."""
+
+
+class RuntimeStateError(OrchestratorError):
+    """Base exception for durable runtime-state failures."""
+
+
+class RuntimeStatePersistenceError(RuntimeStateError):
+    """Raised when runtime state cannot be durably saved, loaded, or cleared."""
+
+
+class RuntimeStateCorruptionError(RuntimeStateError):
+    """Raised when persisted runtime-state JSON is malformed or structurally invalid."""
+
+
+class RuntimeStateSchemaError(RuntimeStateError):
+    """Raised when persisted runtime state uses an unsupported schema version."""
+
+
+class RuntimeStateOwnershipError(RuntimeStateError):
+    """Raised when persisted runtime-state ownership cannot be resolved safely."""

@@ -22,6 +22,14 @@ from poe_backup_orchestrator.services import (
     create_sqlite_backup,
     validate_repository,
 )
+from poe_backup_orchestrator.services.run_service import SystemUtcClock
+from poe_backup_orchestrator.services.runtime_recovery import (
+    RuntimeRecoveryInspection,
+    RuntimeRecoveryInspector,
+    SystemHostIdentity,
+    SystemProcessLiveness,
+)
+from poe_backup_orchestrator.services.runtime_state_store import RuntimeStateStore
 
 DEFAULT_CONFIG_PATH = Path("config/orchestrator.toml")
 DEFAULT_REGISTRY_ASSET_ID = "poeregistry"
@@ -52,6 +60,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("status", help="Display the current orchestrator status.")
+    subparsers.add_parser(
+        "runtime-state",
+        help="Inspect the authoritative orchestrator runtime state.",
+    )
     subparsers.add_parser(
         "validate-repository",
         help="Validate the managed backup repository.",
@@ -130,6 +142,28 @@ def _require_valid_repository() -> None:
         )
 
 
+def _print_runtime_state(inspection: RuntimeRecoveryInspection) -> None:
+    # Render one stable, human-readable runtime-state inspection.
+
+    print("POE Backup Orchestrator — Runtime State")
+    print(f"Recovery outcome: {inspection.outcome.value}")
+    print(f"State changed: {'yes' if inspection.state_changed else 'no'}")
+
+    state = inspection.state
+    if state is None:
+        print("No runtime state present.")
+        return
+
+    print(f"Runtime status: {state.status.value}")
+    print(f"Execution state: {state.execution_state.value}")
+    print(f"Run ID: {state.run_id}")
+    print(f"Hostname: {state.hostname}")
+    print(f"PID: {state.pid}")
+    print(f"Started (UTC): {state.started_at_utc.isoformat()}")
+    print(f"Updated (UTC): {state.updated_at_utc.isoformat()}")
+    print(f"Environment: {state.environment.value}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
@@ -158,6 +192,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Log root: {context.runtime.log_root}")
             print(f"Repository: {context.config.paths.repository_root}")
             print("State: BOOTSTRAP_READY")
+            return 0
+
+        if arguments.command == "runtime-state":
+            store = RuntimeStateStore(context.runtime.state_root)
+            inspector = RuntimeRecoveryInspector(
+                store=store,
+                host_identity=SystemHostIdentity(),
+                process_liveness=SystemProcessLiveness(),
+                clock=SystemUtcClock(),
+            )
+            _print_runtime_state(inspector.inspect())
             return 0
 
         if arguments.command == "validate-repository":
