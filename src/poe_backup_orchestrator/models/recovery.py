@@ -46,6 +46,14 @@ class RecoveryPointReasonCode(StrEnum):
     OPERATOR_REVIEW_REQUIRED = "operator_review_required"
     STATUS_UNDETERMINED = "status_undetermined"
 
+    RECOVERY_POINT_ELIGIBLE = "recovery_point_eligible"
+    ARTIFACT_PATH_MISSING = "artifact_path_missing"
+    ARTIFACT_NOT_REGULAR_FILE = "artifact_not_regular_file"
+    ARTIFACT_SIZE_MISMATCH = "artifact_size_mismatch"
+    ARTIFACT_CHECKSUM_MISMATCH = "artifact_checksum_mismatch"
+    VERIFICATION_STATUS_UNKNOWN = "verification_status_unknown"
+    RECOVERY_POINT_QUARANTINED = "recovery_point_quarantined"
+
 
 @dataclass(frozen=True, slots=True)
 class RecoveryPointEligibilityResult:
