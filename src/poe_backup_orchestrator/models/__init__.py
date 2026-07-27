@@ -39,8 +39,11 @@ from poe_backup_orchestrator.models.registry_acceptance import (
 from poe_backup_orchestrator.models.registry_ingestion import RegistryIngestionResult
 from poe_backup_orchestrator.models.repository import RepositoryValidationResult
 from poe_backup_orchestrator.models.runtime import (
+    RUNTIME_STATE_SCHEMA_VERSION,
     RuntimeDescriptor,
     RuntimeEnvironment,
+    RuntimeExecutionStatus,
+    RuntimeState,
     RuntimeValidationCheck,
     RuntimeValidationResult,
 )
@@ -79,6 +82,9 @@ __all__ += [
     "OperationalFailureReport",
     "OperationalReport",
     "OperationalReportPublication",
+    "RUNTIME_STATE_SCHEMA_VERSION",
+    "RuntimeExecutionStatus",
+    "RuntimeState",
     "RegistryBackupRequest",
 ]
 
