@@ -237,6 +237,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 reports_root=context.config.paths.reports_root / "Backup-Orchestrator",
                 destination_root=destination_root,
                 asset_id=arguments.asset_id,
+                state_root=context.runtime.state_root,
+                environment=context.runtime.environment,
             )
             run_result = service.execute(RegistryBackupRequest(source_path=arguments.source))
             print(run_result.summary, end="")
@@ -259,6 +261,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 reports_root=context.config.paths.reports_root / "Backup-Orchestrator",
                 destination_root=destination_root,
                 asset_id=arguments.asset_id,
+                state_root=context.runtime.state_root,
+                environment=context.runtime.environment,
             )
             acceptance_service = OperationalAcceptanceService(
                 run_service=run_service,

@@ -223,6 +223,8 @@ def test_run_command_delegates_to_run_service(
     assert received["reports_root"] == Path("/tmp/reports/Backup-Orchestrator")
     assert received["destination_root"] == Path("/tmp/repository/Registry/POERegistry")
     assert received["asset_id"] == "poeregistry"
+    assert received["state_root"] == Path(".runtime/state")
+    assert received["environment"].value == "test"
     assert received["request"].source_path == source
     assert "Outcome: succeeded" in captured.out
     assert "JSON report: /reports/report.json" in captured.out
