@@ -58,6 +58,10 @@ from poe_backup_orchestrator.services.run_service import (
     SystemUtcClock,
     build_registry_backup_run_service,
 )
+from poe_backup_orchestrator.services.runtime_validation import (
+    require_valid_runtime,
+    validate_runtime,
+)
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 __all__ = [
@@ -96,4 +100,9 @@ __all__ = [
     "publish_operational_report",
     "render_operational_summary",
     "validate_repository",
+]
+
+__all__ += [
+    "require_valid_runtime",
+    "validate_runtime",
 ]

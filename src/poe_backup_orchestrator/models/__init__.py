@@ -38,6 +38,12 @@ from poe_backup_orchestrator.models.registry_acceptance import (
 )
 from poe_backup_orchestrator.models.registry_ingestion import RegistryIngestionResult
 from poe_backup_orchestrator.models.repository import RepositoryValidationResult
+from poe_backup_orchestrator.models.runtime import (
+    RuntimeDescriptor,
+    RuntimeEnvironment,
+    RuntimeValidationCheck,
+    RuntimeValidationResult,
+)
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
 
 __all__ = [
@@ -74,4 +80,11 @@ __all__ += [
     "OperationalReport",
     "OperationalReportPublication",
     "RegistryBackupRequest",
+]
+
+__all__ += [
+    "RuntimeDescriptor",
+    "RuntimeEnvironment",
+    "RuntimeValidationCheck",
+    "RuntimeValidationResult",
 ]
