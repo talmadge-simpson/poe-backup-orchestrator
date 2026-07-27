@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
+from datetime import datetime
+from typing import Any, Protocol
 
 from poe_backup_orchestrator.exceptions import OrchestratorError
 from poe_backup_orchestrator.models import (
@@ -29,6 +30,15 @@ from poe_backup_orchestrator.services.failure_mapping import (
     map_operational_failure,
 )
 
+
+class RuntimeLifecycle(Protocol):
+    """Persist runtime ownership and accepted orchestration transitions."""
+
+    def start(self, job_id: JobId, started_at_utc: datetime) -> object: ...
+
+    def transition_to(self, execution_state: ExecutionState) -> object: ...
+
+
 StateMachineFactory = Callable[[Clock], ExecutionStateMachine]
 
 
@@ -43,6 +53,7 @@ class RegistryBackupOrchestrator:
     clock: Clock
     job_id_generator: JobIdGenerator
     state_machine_factory: StateMachineFactory = ExecutionStateMachine
+    runtime_lifecycle: RuntimeLifecycle | None = None
 
     def execute(
         self,
@@ -53,6 +64,8 @@ class RegistryBackupOrchestrator:
         started_at_utc = request.requested_at_utc or self.clock.now_utc()
         job_id = request.job_id or self.job_id_generator.generate(started_at_utc)
         state_machine = self.state_machine_factory(self.clock)
+        if self.runtime_lifecycle is not None:
+            self.runtime_lifecycle.start(job_id, started_at_utc)
 
         repository_result: Any | None = None
         acquisition_result: Any | None = None
@@ -60,22 +73,22 @@ class RegistryBackupOrchestrator:
         acceptance_result: Any | None = None
 
         try:
-            state_machine.transition_to(ExecutionState.LOCK_ACQUISITION)
+            self._transition_to(state_machine, ExecutionState.LOCK_ACQUISITION)
 
-            state_machine.transition_to(ExecutionState.REPOSITORY_VALIDATION)
+            self._transition_to(state_machine, ExecutionState.REPOSITORY_VALIDATION)
             repository_result = self.repository_validation.validate()
 
-            state_machine.transition_to(ExecutionState.REGISTRY_ACQUISITION)
+            self._transition_to(state_machine, ExecutionState.REGISTRY_ACQUISITION)
             acquisition_result = self.registry_acquisition.acquire()
 
-            state_machine.transition_to(ExecutionState.ACQUISITION_VALIDATION)
+            self._transition_to(state_machine, ExecutionState.ACQUISITION_VALIDATION)
             validation_result = self.acquisition_validation.validate(acquisition_result)
 
-            state_machine.transition_to(ExecutionState.REGISTRY_ACCEPTANCE)
+            self._transition_to(state_machine, ExecutionState.REGISTRY_ACCEPTANCE)
             acceptance_result = self.registry_acceptance.accept(validation_result)
 
-            state_machine.transition_to(ExecutionState.REPORT_GENERATION)
-            state_machine.transition_to(ExecutionState.COMPLETED)
+            self._transition_to(state_machine, ExecutionState.REPORT_GENERATION)
+            self._transition_to(state_machine, ExecutionState.COMPLETED)
         except OrchestratorError as error:
             return self._failed_result(
                 error=error,
@@ -105,6 +118,17 @@ class RegistryBackupOrchestrator:
             acceptance=acceptance_result,
         )
 
+    def _transition_to(
+        self,
+        state_machine: ExecutionStateMachine,
+        state: ExecutionState,
+    ) -> None:
+        """Apply a legal transition and then persist its runtime projection."""
+
+        state_machine.transition_to(state)
+        if self.runtime_lifecycle is not None:
+            self.runtime_lifecycle.transition_to(state)
+
     def _failed_result(
         self,
         *,
@@ -122,7 +146,7 @@ class RegistryBackupOrchestrator:
             error,
             failed_state=failed_state,
         )
-        state_machine.transition_to(ExecutionState.FAILED)
+        self._transition_to(state_machine, ExecutionState.FAILED)
 
         completed_at_utc = self.clock.now_utc()
         duration_ms = self._duration_ms(started_at_utc, completed_at_utc)

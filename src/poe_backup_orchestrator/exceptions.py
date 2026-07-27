@@ -59,3 +59,7 @@ class RuntimeStateCorruptionError(RuntimeStateError):
 
 class RuntimeStateSchemaError(RuntimeStateError):
     """Raised when persisted runtime state uses an unsupported schema version."""
+
+
+class RuntimeStateOwnershipError(RuntimeStateError):
+    """Raised when persisted runtime-state ownership cannot be resolved safely."""

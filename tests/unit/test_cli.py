@@ -358,3 +358,145 @@ def test_acceptance_run_command_delegates_and_returns_status(
     assert received["evidence_root"] == Path("/tmp/reports/Backup-Orchestrator/Acceptance")
     assert "Status: passed" in captured.out
     assert "Acceptance JSON: /evidence/acceptance.json" in captured.out
+
+
+def test_runtime_state_command_reports_no_state(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    """Confirm runtime-state reports an empty authoritative state."""
+
+    from poe_backup_orchestrator.services.runtime_recovery import (
+        RuntimeRecoveryInspection,
+        RuntimeRecoveryOutcome,
+    )
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    received = {}
+
+    class FakeStore:
+        def __init__(self, state_root: Path) -> None:
+            received["state_root"] = state_root
+
+    class FakeInspector:
+        def __init__(self, **kwargs) -> None:
+            received.update(kwargs)
+
+        def inspect(self) -> RuntimeRecoveryInspection:
+            return RuntimeRecoveryInspection(RuntimeRecoveryOutcome.NO_STATE, None)
+
+    monkeypatch.setattr("poe_backup_orchestrator.cli.RuntimeStateStore", FakeStore)
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.RuntimeRecoveryInspector",
+        FakeInspector,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "runtime-state",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert received["state_root"].name == "state"
+    assert "Recovery outcome: no_state" in captured.out
+    assert "State changed: no" in captured.out
+    assert "No runtime state present." in captured.out
+
+
+def test_runtime_state_command_reports_persisted_state(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    """Confirm runtime-state renders all authoritative state fields."""
+
+    from datetime import UTC, datetime
+
+    from poe_backup_orchestrator.models import (
+        RUNTIME_STATE_SCHEMA_VERSION,
+        ExecutionState,
+        RuntimeEnvironment,
+        RuntimeExecutionStatus,
+        RuntimeState,
+    )
+    from poe_backup_orchestrator.services.runtime_recovery import (
+        RuntimeRecoveryInspection,
+        RuntimeRecoveryOutcome,
+    )
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    timestamp = datetime(2026, 7, 27, 16, 30, tzinfo=UTC)
+    state = RuntimeState(
+        schema_version=RUNTIME_STATE_SCHEMA_VERSION,
+        run_id="job-cli-state",
+        status=RuntimeExecutionStatus.INTERRUPTED,
+        execution_state=ExecutionState.REPORT_GENERATION,
+        started_at_utc=timestamp,
+        updated_at_utc=timestamp,
+        pid=4321,
+        hostname="ai-lab",
+        environment=RuntimeEnvironment.TEST,
+    )
+
+    class FakeStore:
+        def __init__(self, state_root: Path) -> None:
+            self.state_root = state_root
+
+    class FakeInspector:
+        def __init__(self, **kwargs) -> None:
+            del kwargs
+
+        def inspect(self) -> RuntimeRecoveryInspection:
+            return RuntimeRecoveryInspection(
+                RuntimeRecoveryOutcome.INTERRUPTED_EXECUTION,
+                state,
+                state_changed=True,
+            )
+
+    monkeypatch.setattr("poe_backup_orchestrator.cli.RuntimeStateStore", FakeStore)
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.RuntimeRecoveryInspector",
+        FakeInspector,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "runtime-state",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "Recovery outcome: interrupted_execution" in captured.out
+    assert "State changed: yes" in captured.out
+    assert "Runtime status: interrupted" in captured.out
+    assert "Execution state: report_generation" in captured.out
+    assert "Run ID: job-cli-state" in captured.out
+    assert "Hostname: ai-lab" in captured.out
+    assert "PID: 4321" in captured.out
+    assert "Environment: test" in captured.out
+
+
+def test_runtime_state_command_is_present_in_help(capsys) -> None:
+    """Confirm runtime-state is exposed as a supported CLI command."""
+
+    from poe_backup_orchestrator.cli import build_parser
+
+    parser = build_parser()
+
+    with __import__("pytest").raises(SystemExit) as raised:
+        parser.parse_args(["--help"])
+
+    captured = capsys.readouterr()
+
+    assert raised.value.code == 0
+    assert "runtime-state" in captured.out
