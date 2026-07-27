@@ -19,17 +19,13 @@ from poe_backup_orchestrator.services import (
     REPORTING_FAILURE_EXIT_CODE,
     OperationalAcceptanceService,
     build_registry_backup_run_service,
+    build_runtime_recovery_inspector,
     create_sqlite_backup,
     validate_repository,
 )
-from poe_backup_orchestrator.services.run_service import SystemUtcClock
 from poe_backup_orchestrator.services.runtime_recovery import (
     RuntimeRecoveryInspection,
-    RuntimeRecoveryInspector,
-    SystemHostIdentity,
-    SystemProcessLiveness,
 )
-from poe_backup_orchestrator.services.runtime_state_store import RuntimeStateStore
 
 DEFAULT_CONFIG_PATH = Path("config/orchestrator.toml")
 DEFAULT_REGISTRY_ASSET_ID = "poeregistry"
@@ -195,12 +191,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
 
         if arguments.command == "runtime-state":
-            store = RuntimeStateStore(context.runtime.state_root)
-            inspector = RuntimeRecoveryInspector(
-                store=store,
-                host_identity=SystemHostIdentity(),
-                process_liveness=SystemProcessLiveness(),
-                clock=SystemUtcClock(),
+            inspector = build_runtime_recovery_inspector(
+                state_root=context.runtime.state_root,
             )
             _print_runtime_state(inspector.inspect())
             return 0

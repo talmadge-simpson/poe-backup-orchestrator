@@ -378,21 +378,17 @@ def test_runtime_state_command_reports_no_state(
     write_test_config(config_path)
     received = {}
 
-    class FakeStore:
-        def __init__(self, state_root: Path) -> None:
-            received["state_root"] = state_root
-
     class FakeInspector:
-        def __init__(self, **kwargs) -> None:
-            received.update(kwargs)
-
         def inspect(self) -> RuntimeRecoveryInspection:
             return RuntimeRecoveryInspection(RuntimeRecoveryOutcome.NO_STATE, None)
 
-    monkeypatch.setattr("poe_backup_orchestrator.cli.RuntimeStateStore", FakeStore)
+    def fake_builder(**kwargs):
+        received.update(kwargs)
+        return FakeInspector()
+
     monkeypatch.setattr(
-        "poe_backup_orchestrator.cli.RuntimeRecoveryInspector",
-        FakeInspector,
+        "poe_backup_orchestrator.cli.build_runtime_recovery_inspector",
+        fake_builder,
     )
 
     exit_code = main(
@@ -405,7 +401,7 @@ def test_runtime_state_command_reports_no_state(
     captured = capsys.readouterr()
 
     assert exit_code == 0
-    assert received["state_root"].name == "state"
+    assert received["state_root"] == Path(".runtime/state")
     assert "Recovery outcome: no_state" in captured.out
     assert "State changed: no" in captured.out
     assert "No runtime state present." in captured.out
@@ -447,14 +443,9 @@ def test_runtime_state_command_reports_persisted_state(
         environment=RuntimeEnvironment.TEST,
     )
 
-    class FakeStore:
-        def __init__(self, state_root: Path) -> None:
-            self.state_root = state_root
+    received = {}
 
     class FakeInspector:
-        def __init__(self, **kwargs) -> None:
-            del kwargs
-
         def inspect(self) -> RuntimeRecoveryInspection:
             return RuntimeRecoveryInspection(
                 RuntimeRecoveryOutcome.INTERRUPTED_EXECUTION,
@@ -462,10 +453,13 @@ def test_runtime_state_command_reports_persisted_state(
                 state_changed=True,
             )
 
-    monkeypatch.setattr("poe_backup_orchestrator.cli.RuntimeStateStore", FakeStore)
+    def fake_builder(**kwargs):
+        received.update(kwargs)
+        return FakeInspector()
+
     monkeypatch.setattr(
-        "poe_backup_orchestrator.cli.RuntimeRecoveryInspector",
-        FakeInspector,
+        "poe_backup_orchestrator.cli.build_runtime_recovery_inspector",
+        fake_builder,
     )
 
     exit_code = main(
@@ -478,6 +472,7 @@ def test_runtime_state_command_reports_persisted_state(
     captured = capsys.readouterr()
 
     assert exit_code == 0
+    assert received["state_root"] == Path(".runtime/state")
     assert "Recovery outcome: interrupted_execution" in captured.out
     assert "State changed: yes" in captured.out
     assert "Runtime status: interrupted" in captured.out
