@@ -59,6 +59,9 @@ from poe_backup_orchestrator.services.run_service import (
     SystemUtcClock,
     build_registry_backup_run_service,
 )
+from poe_backup_orchestrator.services.runtime_composition import (
+    build_runtime_recovery_inspector,
+)
 from poe_backup_orchestrator.services.runtime_lifecycle import (
     RuntimeLifecycleCoordinator,
 )
@@ -80,6 +83,7 @@ from poe_backup_orchestrator.services.runtime_validation import (
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
 
 __all__ = [
+    "build_runtime_recovery_inspector",
     "RuntimeLifecycleCoordinator",
     "RuntimeLifecycle",
     "SystemProcessLiveness",
