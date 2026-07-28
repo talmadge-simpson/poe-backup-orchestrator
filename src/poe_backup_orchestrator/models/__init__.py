@@ -72,6 +72,16 @@ from poe_backup_orchestrator.models.restore_plan import (
     RestorePlanValidation,
     RestoreWarning,
 )
+from poe_backup_orchestrator.models.restore_registry_application_validation import (
+    RESTORE_REGISTRY_APPLICATION_VALIDATION_SCHEMA_VERSION,
+    RegistryApplicationValidationPolicy,
+    RegistryMetadataExpectation,
+    RegistryRowCountInvariant,
+    RestoreRegistryApplicationValidation,
+    RestoreRegistryApplicationValidationReasonCode,
+    RestoreRegistryApplicationValidationStatus,
+    RowCountInvariantOperator,
+)
 from poe_backup_orchestrator.models.restore_staged_artifact_validation import (
     RESTORE_STAGED_ARTIFACT_VALIDATION_SCHEMA_VERSION,
     RestoreStagedArtifactValidation,
@@ -146,6 +156,14 @@ __all__ = [
     "RestoreStagedArtifactValidation",
     "RestoreStagedArtifactValidationReasonCode",
     "RestoreStagedArtifactValidationStatus",
+    "RESTORE_REGISTRY_APPLICATION_VALIDATION_SCHEMA_VERSION",
+    "RegistryApplicationValidationPolicy",
+    "RegistryMetadataExpectation",
+    "RegistryRowCountInvariant",
+    "RestoreRegistryApplicationValidation",
+    "RestoreRegistryApplicationValidationReasonCode",
+    "RestoreRegistryApplicationValidationStatus",
+    "RowCountInvariantOperator",
 ]
 
 __all__ += [
