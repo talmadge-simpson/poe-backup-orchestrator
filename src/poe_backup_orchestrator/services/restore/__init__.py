@@ -1,5 +1,9 @@
 """Restore-domain services for governed Registry recovery."""
 
+from poe_backup_orchestrator.services.restore.authoritative_promotion import (
+    RestoreAuthoritativePromotionError,
+    RestoreAuthoritativePromotionService,
+)
 from poe_backup_orchestrator.services.restore.authoritative_target_preflight import (
     RestoreAuthoritativeTargetPreflightError,
     RestoreAuthoritativeTargetPreflightService,
@@ -116,4 +120,6 @@ __all__ = [
     "RestoreExecutionOwnershipHandle",
     "RestorePromotionReadinessError",
     "RestorePromotionReadinessService",
+    "RestoreAuthoritativePromotionError",
+    "RestoreAuthoritativePromotionService",
 ]
