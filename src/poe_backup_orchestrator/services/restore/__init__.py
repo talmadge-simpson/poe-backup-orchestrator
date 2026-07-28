@@ -132,4 +132,17 @@ __all__ = [
     "RestoreAuthoritativePromotionService",
     "RestorePostPromotionVerificationError",
     "RestorePostPromotionVerificationService",
+    "RestoreExecutionRecordConflictError",
+    "RestoreExecutionRecordPublication",
+    "RestoreExecutionRecordPublicationError",
+    "RestoreExecutionRecordPublisher",
+    "serialize_restore_execution_record",
 ]
+
+from poe_backup_orchestrator.services.restore.execution_record_persistence import (
+    RestoreExecutionRecordConflictError,
+    RestoreExecutionRecordPublication,
+    RestoreExecutionRecordPublicationError,
+    RestoreExecutionRecordPublisher,
+    serialize_restore_execution_record,
+)
