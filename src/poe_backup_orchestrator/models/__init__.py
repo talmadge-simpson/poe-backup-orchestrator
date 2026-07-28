@@ -53,6 +53,19 @@ from poe_backup_orchestrator.models.registry_acceptance import (
 )
 from poe_backup_orchestrator.models.registry_ingestion import RegistryIngestionResult
 from poe_backup_orchestrator.models.repository import RepositoryValidationResult
+from poe_backup_orchestrator.models.restore_plan import (
+    RESTORE_PLAN_POLICY_VERSION,
+    RESTORE_PLAN_SCHEMA_VERSION,
+    RestoreAction,
+    RestoreActionType,
+    RestoreConflict,
+    RestorePlan,
+    RestorePlanReadiness,
+    RestorePlanReasonCode,
+    RestorePlanRequest,
+    RestorePlanValidation,
+    RestoreWarning,
+)
 from poe_backup_orchestrator.models.runtime import (
     RUNTIME_STATE_SCHEMA_VERSION,
     RuntimeDescriptor,
@@ -119,4 +132,15 @@ __all__ += [
     "RuntimeEnvironment",
     "RuntimeValidationCheck",
     "RuntimeValidationResult",
+    "RESTORE_PLAN_POLICY_VERSION",
+    "RESTORE_PLAN_SCHEMA_VERSION",
+    "RestoreAction",
+    "RestoreActionType",
+    "RestoreConflict",
+    "RestorePlan",
+    "RestorePlanReadiness",
+    "RestorePlanReasonCode",
+    "RestorePlanRequest",
+    "RestorePlanValidation",
+    "RestoreWarning",
 ]
