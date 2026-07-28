@@ -16,6 +16,11 @@ from poe_backup_orchestrator.services.restore.manifest import (
     RecoveryManifestError,
     read_recovery_manifest,
 )
+from poe_backup_orchestrator.services.restore.planning import (
+    RestorePlanningError,
+    RestorePlanningService,
+    build_restore_plan,
+)
 
 __all__ = [
     "DEFAULT_ELIGIBILITY_POLICY_VERSION",
@@ -28,4 +33,7 @@ __all__ = [
     "discover_recovery_points",
     "locate_recovery_point_packages",
     "read_recovery_manifest",
+    "RestorePlanningError",
+    "RestorePlanningService",
+    "build_restore_plan",
 ]
