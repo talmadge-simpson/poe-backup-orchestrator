@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from poe_backup_orchestrator.models import RestoreExecutionRecord
 from poe_backup_orchestrator.services import restore
 from poe_backup_orchestrator.services.restore import RestoreExecutionOrchestrator
 
@@ -25,16 +26,20 @@ def _build_orchestrator():
     ownership = object()
     ownership_handle = SimpleNamespace(evidence=ownership, release=Mock())
 
-    workspace_preflight_result = object()
-    workspace_materialization_result = object()
-    artifact_staging_result = object()
-    staged_validation_result = object()
-    application_validation_result = object()
-    authoritative_preflight_result = object()
-    rollback_capture_result = object()
-    promotion_readiness_result = object()
-    authoritative_promotion_result = object()
-    post_promotion_verification_result = object()
+    workspace_preflight_result = SimpleNamespace(plan_id=plan.plan_id)
+    workspace_materialization_result = SimpleNamespace(plan_id=plan.plan_id)
+    artifact_staging_result = SimpleNamespace(plan_id=plan.plan_id)
+    staged_validation_result = SimpleNamespace(plan_id=plan.plan_id)
+    application_validation_result = SimpleNamespace(plan_id=plan.plan_id)
+    authoritative_preflight_result = SimpleNamespace(plan_id=plan.plan_id)
+    rollback_capture_result = SimpleNamespace(plan_id=plan.plan_id)
+    promotion_readiness_result = SimpleNamespace(plan_id=plan.plan_id)
+    authoritative_promotion_result = SimpleNamespace(plan_id=plan.plan_id)
+    post_promotion_verification_result = SimpleNamespace(
+        plan_id=plan.plan_id,
+        verified_at_utc=datetime(2026, 7, 28, 15, 0, 10, tzinfo=UTC),
+        restore_completed=True,
+    )
 
     workspace_preflight = Mock()
     workspace_preflight.evaluate.return_value = workspace_preflight_result
@@ -122,7 +127,20 @@ def test_execute_sequences_services_and_returns_completion_evidence():
         lock_path=context.lock_path,
     )
 
-    assert result is context.post_promotion_verification_result
+    assert isinstance(result, RestoreExecutionRecord)
+    assert result.plan is context.plan
+    assert result.lock_path == context.lock_path
+    assert result.workspace_preflight is context.workspace_preflight_result
+    assert result.workspace_materialization is context.workspace_materialization_result
+    assert result.artifact_staging is context.artifact_staging_result
+    assert result.staged_validation is context.staged_validation_result
+    assert result.application_validation is context.application_validation_result
+    assert result.authoritative_preflight is context.authoritative_preflight_result
+    assert result.rollback_capture is context.rollback_capture_result
+    assert result.promotion_readiness is context.promotion_readiness_result
+    assert result.authoritative_promotion is context.authoritative_promotion_result
+    assert result.post_promotion_verification is context.post_promotion_verification_result
+    assert result.restore_completed is True
     assert context.clock.call_count == 11
 
     context.promotion_readiness.acquire_ownership.assert_called_once_with(

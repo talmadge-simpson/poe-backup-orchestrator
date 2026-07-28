@@ -74,6 +74,10 @@ from poe_backup_orchestrator.models.restore_authoritative_target_preflight impor
     RestoreAuthoritativeTargetState,
     RestoreRollbackPlan,
 )
+from poe_backup_orchestrator.models.restore_execution_record import (
+    RESTORE_EXECUTION_RECORD_SCHEMA_VERSION,
+    RestoreExecutionRecord,
+)
 from poe_backup_orchestrator.models.restore_plan import (
     RESTORE_PLAN_POLICY_VERSION,
     RESTORE_PLAN_SCHEMA_VERSION,
@@ -150,6 +154,8 @@ from poe_backup_orchestrator.models.runtime import (
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
 
 __all__ = [
+    "RESTORE_EXECUTION_RECORD_SCHEMA_VERSION",
+    "RestoreExecutionRecord",
     "OperationalAcceptanceStatus",
     "OperationalAcceptanceResult",
     "OperationalAcceptancePublication",

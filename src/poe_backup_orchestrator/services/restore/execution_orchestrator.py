@@ -5,8 +5,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from poe_backup_orchestrator.models import (
+    RESTORE_EXECUTION_RECORD_SCHEMA_VERSION,
+    RestoreExecutionRecord,
     RestorePlan,
-    RestorePostPromotionVerification,
 )
 from poe_backup_orchestrator.services.restore.authoritative_promotion import (
     RestoreAuthoritativePromotionService,
@@ -79,13 +80,14 @@ class RestoreExecutionOrchestrator:
         plan: RestorePlan,
         *,
         lock_path: Path,
-    ) -> RestorePostPromotionVerification:
-        """Execute one authorized restore plan and return completion evidence."""
+    ) -> RestoreExecutionRecord:
+        """Execute one authorized restore plan and return aggregate evidence."""
 
+        started_at_utc = self._clock()
         ownership_handle = self._promotion_readiness.acquire_ownership(
             plan_id=plan.plan_id,
             lock_path=lock_path,
-            acquired_at_utc=self._clock(),
+            acquired_at_utc=started_at_utc,
         )
 
         try:
@@ -140,10 +142,29 @@ class RestoreExecutionOrchestrator:
                 promotion_readiness,
                 executed_at_utc=self._clock(),
             )
-            return self._post_promotion_verification.verify(
+            post_promotion_verification = self._post_promotion_verification.verify(
                 plan,
                 authoritative_promotion,
                 verified_at_utc=self._clock(),
+            )
+            return RestoreExecutionRecord(
+                schema_version=RESTORE_EXECUTION_RECORD_SCHEMA_VERSION,
+                plan_id=plan.plan_id,
+                started_at_utc=started_at_utc,
+                completed_at_utc=post_promotion_verification.verified_at_utc,
+                lock_path=lock_path,
+                plan=plan,
+                workspace_preflight=workspace_preflight,
+                workspace_materialization=workspace_materialization,
+                artifact_staging=artifact_staging,
+                staged_validation=staged_validation,
+                application_validation=application_validation,
+                authoritative_preflight=authoritative_preflight,
+                rollback_capture=rollback_capture,
+                promotion_readiness=promotion_readiness,
+                authoritative_promotion=authoritative_promotion,
+                post_promotion_verification=post_promotion_verification,
+                restore_completed=True,
             )
         finally:
             ownership_handle.release()
