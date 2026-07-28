@@ -35,6 +35,13 @@ from poe_backup_orchestrator.services.restore.preflight import (
     WorkspacePathProbe,
     preflight_restore_workspace,
 )
+from poe_backup_orchestrator.services.restore.staging import (
+    ArtifactFilesystemOperator,
+    LocalArtifactFilesystemOperator,
+    RestoreArtifactStagingError,
+    RestoreArtifactStagingService,
+    stage_restore_artifact,
+)
 
 __all__ = [
     "DEFAULT_ELIGIBILITY_POLICY_VERSION",
@@ -60,4 +67,9 @@ __all__ = [
     "RestoreWorkspaceMaterializationService",
     "WorkspaceFilesystemOperator",
     "materialize_restore_workspace",
+    "ArtifactFilesystemOperator",
+    "LocalArtifactFilesystemOperator",
+    "RestoreArtifactStagingError",
+    "RestoreArtifactStagingService",
+    "stage_restore_artifact",
 ]
