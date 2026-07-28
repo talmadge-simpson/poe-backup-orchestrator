@@ -21,6 +21,9 @@ from poe_backup_orchestrator.services.restore.eligibility import (
     evaluate_recovery_point,
     evaluate_recovery_points,
 )
+from poe_backup_orchestrator.services.restore.execution_orchestrator import (
+    RestoreExecutionOrchestrator,
+)
 from poe_backup_orchestrator.services.restore.manifest import (
     RecoveryManifestError,
     read_recovery_manifest,
@@ -79,6 +82,7 @@ from poe_backup_orchestrator.services.restore.staging import (
 )
 
 __all__ = [
+    "RestoreExecutionOrchestrator",
     "DEFAULT_ELIGIBILITY_POLICY_VERSION",
     "evaluate_recovery_point",
     "evaluate_recovery_points",
