@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from pathlib import Path
 
 from poe_backup_orchestrator import __version__
@@ -15,6 +16,7 @@ from poe_backup_orchestrator.exceptions import (
     RepositoryValidationError,
 )
 from poe_backup_orchestrator.models import RegistryBackupRequest, RuntimeEnvironment
+from poe_backup_orchestrator.models.recovery import RecoveryPoint
 from poe_backup_orchestrator.services import (
     REPORTING_FAILURE_EXIT_CODE,
     OperationalAcceptanceService,
@@ -22,6 +24,11 @@ from poe_backup_orchestrator.services import (
     build_runtime_recovery_inspector,
     create_sqlite_backup,
     validate_repository,
+)
+from poe_backup_orchestrator.services.restore import (
+    RecoveryPointDiscoveryError,
+    discover_recovery_points,
+    evaluate_recovery_point,
 )
 from poe_backup_orchestrator.services.runtime_recovery import (
     RuntimeRecoveryInspection,
@@ -107,6 +114,53 @@ def build_parser() -> argparse.ArgumentParser:
     )
     acceptance_parser.add_argument("--destination-root", type=Path, default=None)
     acceptance_parser.add_argument("--evidence-root", type=Path, default=None)
+
+    restore_parser = subparsers.add_parser(
+        "restore",
+        help="Inspect governed Registry recovery points.",
+    )
+    restore_subparsers = restore_parser.add_subparsers(dest="restore_command")
+
+    restore_list_parser = restore_subparsers.add_parser(
+        "list",
+        help="List discovered Registry recovery points.",
+    )
+    restore_list_parser.add_argument(
+        "--destination-root",
+        type=Path,
+        default=None,
+        help=(
+            "Accepted Registry destination root (default: <repository_root>/Registry/POERegistry)."
+        ),
+    )
+
+    restore_show_parser = restore_subparsers.add_parser(
+        "show",
+        help="Show one discovered Registry recovery point.",
+    )
+    restore_show_parser.add_argument("--backup-id", required=True)
+    restore_show_parser.add_argument(
+        "--destination-root",
+        type=Path,
+        default=None,
+        help=(
+            "Accepted Registry destination root (default: <repository_root>/Registry/POERegistry)."
+        ),
+    )
+
+    restore_evaluate_parser = restore_subparsers.add_parser(
+        "evaluate",
+        help="Evaluate one Registry recovery point for restore eligibility.",
+    )
+    restore_evaluate_parser.add_argument("--backup-id", required=True)
+    restore_evaluate_parser.add_argument(
+        "--destination-root",
+        type=Path,
+        default=None,
+        help=(
+            "Accepted Registry destination root (default: <repository_root>/Registry/POERegistry)."
+        ),
+    )
     return parser
 
 
@@ -158,6 +212,69 @@ def _print_runtime_state(inspection: RuntimeRecoveryInspection) -> None:
     print(f"Started (UTC): {state.started_at_utc.isoformat()}")
     print(f"Updated (UTC): {state.updated_at_utc.isoformat()}")
     print(f"Environment: {state.environment.value}")
+
+
+def _restore_destination_root(arguments, repository_root: Path) -> Path:
+    destination_root = arguments.destination_root
+    if destination_root is not None:
+        return destination_root
+    return repository_root / "Registry" / "POERegistry"
+
+
+def _find_recovery_point(
+    recovery_points: tuple[RecoveryPoint, ...],
+    backup_id: str,
+) -> RecoveryPoint | None:
+    return next(
+        (point for point in recovery_points if point.recovery_point_id == backup_id),
+        None,
+    )
+
+
+def _print_recovery_point_list(
+    recovery_points: tuple[RecoveryPoint, ...],
+    *,
+    destination_root: Path,
+) -> None:
+    print("POE Backup Orchestrator — Recovery Point List")
+    print(f"Destination root: {destination_root}")
+    print(f"Recovery points discovered: {len(recovery_points)}")
+
+    if not recovery_points:
+        print("No recovery points found.")
+        return
+
+    for point in recovery_points:
+        created = (
+            point.created_at_utc.isoformat() if point.created_at_utc is not None else "unknown"
+        )
+        print(f"{point.recovery_point_id} | {created} | {point.eligibility.classification.value}")
+
+
+def _print_recovery_point(
+    point: RecoveryPoint,
+    *,
+    heading: str,
+) -> None:
+    created = point.created_at_utc.isoformat() if point.created_at_utc is not None else "unknown"
+    print(f"POE Backup Orchestrator — {heading}")
+    print(f"Recovery point: {point.recovery_point_id}")
+    print(f"Created (UTC): {created}")
+    print(f"Package: {point.package_path}")
+    print(f"Manifest: {point.manifest_path or 'unknown'}")
+    print(f"Artifact: {point.artifact_path or 'unknown'}")
+    print(f"Registry ID: {point.source_registry_id or 'unknown'}")
+    print(f"Manifest version: {point.manifest_version or 'unknown'}")
+    print(f"Verification: {point.verification_status or 'unknown'}")
+    print(f"Quarantined: {'yes' if point.quarantined else 'no'}")
+    print(f"Eligibility: {point.eligibility.classification.value}")
+    reasons = ", ".join(reason.value for reason in point.eligibility.reason_codes)
+    print(f"Reason codes: {reasons}")
+    override = "yes" if point.eligibility.override_required else "no"
+    print(f"Override required: {override}")
+    print(f"Policy version: {point.eligibility.policy_version}")
+    for warning in point.eligibility.warnings:
+        print(f"Warning: {warning}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -268,6 +385,62 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Acceptance text: {result.publication.summary_path}")
             return result.evidence.exit_code
 
+        if arguments.command == "restore":
+            if arguments.restore_command is None:
+                restore_parser = next(
+                    action
+                    for action in parser._actions
+                    if isinstance(action, argparse._SubParsersAction)
+                ).choices["restore"]
+                restore_parser.print_help()
+                return 0
+
+            destination_root = _restore_destination_root(
+                arguments,
+                context.config.paths.repository_root,
+            )
+            evaluated_at_utc = datetime.now(UTC)
+            recovery_points = discover_recovery_points(
+                destination_root,
+                evaluated_at_utc=evaluated_at_utc,
+            )
+
+            if arguments.restore_command == "list":
+                _print_recovery_point_list(
+                    recovery_points,
+                    destination_root=destination_root,
+                )
+                return 0
+
+            point = _find_recovery_point(
+                recovery_points,
+                arguments.backup_id,
+            )
+            if point is None:
+                print(
+                    f"ERROR: Recovery point not found: {arguments.backup_id}",
+                    file=sys.stderr,
+                )
+                return 1
+
+            if arguments.restore_command == "show":
+                _print_recovery_point(point, heading="Recovery Point")
+                return 0
+
+            if arguments.restore_command == "evaluate":
+                evaluated = evaluate_recovery_point(
+                    point,
+                    evaluated_at_utc=evaluated_at_utc,
+                )
+                _print_recovery_point(
+                    evaluated,
+                    heading="Recovery Point Eligibility",
+                )
+                return 0
+
+    except RecoveryPointDiscoveryError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     except OperationalReportingError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return REPORTING_FAILURE_EXIT_CODE

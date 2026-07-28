@@ -32,6 +32,21 @@ from poe_backup_orchestrator.models.operational_report import (
     OperationalReport,
     OperationalReportPublication,
 )
+from poe_backup_orchestrator.models.recovery import (
+    RecoveryPoint,
+    RecoveryPointEligibility,
+    RecoveryPointEligibilityResult,
+    RecoveryPointReasonCode,
+)
+from poe_backup_orchestrator.models.recovery_manifest import (
+    SUPPORTED_RECOVERY_ACQUISITION_TYPE,
+    SUPPORTED_RECOVERY_MANIFEST_VERSION,
+    RecoveryManifest,
+    RecoveryManifestFaultCode,
+    RecoveryManifestPublication,
+    RecoveryManifestSnapshot,
+    RecoveryManifestVerification,
+)
 from poe_backup_orchestrator.models.registry_acceptance import (
     RegistryAcceptanceResult,
     RegistryAcceptanceStatus,
@@ -58,6 +73,17 @@ __all__ = [
     "AcceptanceCheck",
     "ACCEPTANCE_SCHEMA_VERSION",
     "ACCEPTANCE_SCHEMA_NAME",
+    "RecoveryManifestVerification",
+    "RecoveryManifestSnapshot",
+    "RecoveryManifestPublication",
+    "RecoveryManifestFaultCode",
+    "RecoveryManifest",
+    "SUPPORTED_RECOVERY_MANIFEST_VERSION",
+    "SUPPORTED_RECOVERY_ACQUISITION_TYPE",
+    "RecoveryPointReasonCode",
+    "RecoveryPointEligibilityResult",
+    "RecoveryPointEligibility",
+    "RecoveryPoint",
     "RegistryAcceptanceResult",
     "RegistryAcceptanceStatus",
     "RegistryIngestionResult",
