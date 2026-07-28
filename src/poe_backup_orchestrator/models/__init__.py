@@ -59,6 +59,15 @@ from poe_backup_orchestrator.models.restore_artifact_staging import (
     RestoreArtifactStagingReasonCode,
     RestoreArtifactStagingStatus,
 )
+from poe_backup_orchestrator.models.restore_authoritative_target_preflight import (
+    RESTORE_AUTHORITATIVE_TARGET_PREFLIGHT_SCHEMA_VERSION,
+    RestoreAuthoritativeTargetObservation,
+    RestoreAuthoritativeTargetPreflight,
+    RestoreAuthoritativeTargetPreflightReasonCode,
+    RestoreAuthoritativeTargetPreflightStatus,
+    RestoreAuthoritativeTargetState,
+    RestoreRollbackPlan,
+)
 from poe_backup_orchestrator.models.restore_plan import (
     RESTORE_PLAN_POLICY_VERSION,
     RESTORE_PLAN_SCHEMA_VERSION,
@@ -164,6 +173,13 @@ __all__ = [
     "RestoreRegistryApplicationValidationReasonCode",
     "RestoreRegistryApplicationValidationStatus",
     "RowCountInvariantOperator",
+    "RESTORE_AUTHORITATIVE_TARGET_PREFLIGHT_SCHEMA_VERSION",
+    "RestoreAuthoritativeTargetObservation",
+    "RestoreAuthoritativeTargetPreflight",
+    "RestoreAuthoritativeTargetPreflightReasonCode",
+    "RestoreAuthoritativeTargetPreflightStatus",
+    "RestoreAuthoritativeTargetState",
+    "RestoreRollbackPlan",
 ]
 
 __all__ += [

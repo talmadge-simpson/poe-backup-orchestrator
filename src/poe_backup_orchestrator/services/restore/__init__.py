@@ -1,5 +1,10 @@
 """Restore-domain services for governed Registry recovery."""
 
+from poe_backup_orchestrator.services.restore.authoritative_target_preflight import (
+    RestoreAuthoritativeTargetPreflightError,
+    RestoreAuthoritativeTargetPreflightService,
+    preflight_authoritative_target,
+)
 from poe_backup_orchestrator.services.restore.discovery import (
     DEFAULT_DISCOVERY_POLICY_VERSION,
     DEFAULT_RECOVERY_MANIFEST_FILENAME,
@@ -92,4 +97,7 @@ __all__ = [
     "RestoreRegistryApplicationValidationError",
     "RestoreRegistryApplicationValidationService",
     "validate_staged_registry_application",
+    "RestoreAuthoritativeTargetPreflightError",
+    "RestoreAuthoritativeTargetPreflightService",
+    "preflight_authoritative_target",
 ]
