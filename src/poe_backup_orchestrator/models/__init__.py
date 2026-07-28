@@ -81,6 +81,14 @@ from poe_backup_orchestrator.models.restore_plan import (
     RestorePlanValidation,
     RestoreWarning,
 )
+from poe_backup_orchestrator.models.restore_promotion_readiness import (
+    RESTORE_PROMOTION_READINESS_SCHEMA_VERSION,
+    RestoreExecutionOwnership,
+    RestorePromotionArtifactObservation,
+    RestorePromotionReadiness,
+    RestorePromotionReadinessReasonCode,
+    RestorePromotionReadinessStatus,
+)
 from poe_backup_orchestrator.models.restore_registry_application_validation import (
     RESTORE_REGISTRY_APPLICATION_VALIDATION_SCHEMA_VERSION,
     RegistryApplicationValidationPolicy,
@@ -192,6 +200,12 @@ __all__ = [
     "RestoreRollbackArtifactCaptureReasonCode",
     "RestoreRollbackArtifactCaptureStatus",
     "RestoreRollbackArtifactObservation",
+    "RESTORE_PROMOTION_READINESS_SCHEMA_VERSION",
+    "RestoreExecutionOwnership",
+    "RestorePromotionArtifactObservation",
+    "RestorePromotionReadiness",
+    "RestorePromotionReadinessReasonCode",
+    "RestorePromotionReadinessStatus",
 ]
 
 __all__ += [
