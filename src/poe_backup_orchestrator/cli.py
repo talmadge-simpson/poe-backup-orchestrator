@@ -18,6 +18,7 @@ from poe_backup_orchestrator.exceptions import (
 from poe_backup_orchestrator.models import (
     RegistryBackupRequest,
     RestorePlan,
+    RestorePlanReadiness,
     RestorePlanRequest,
     RuntimeEnvironment,
 )
@@ -32,10 +33,15 @@ from poe_backup_orchestrator.services import (
 )
 from poe_backup_orchestrator.services.restore import (
     RecoveryPointDiscoveryError,
+    RestoreExecutionRecordPublicationError,
+    RestoreExecutionRecordPublisher,
     RestorePlanningError,
+    RestoreValidationPolicyError,
+    build_restore_execution_orchestrator,
     build_restore_plan,
     discover_recovery_points,
     evaluate_recovery_point,
+    load_restore_validation_policy,
 )
 from poe_backup_orchestrator.services.runtime_recovery import (
     RuntimeRecoveryInspection,
@@ -213,6 +219,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Required rationale when --eligibility-override is supplied.",
     )
+    restore_execute_parser = restore_subparsers.add_parser(
+        "execute",
+        help="Execute one confirmed Registry restore in the current process.",
+    )
+    restore_execute_parser.add_argument("--backup-id", required=True)
+    restore_execute_parser.add_argument("--target", required=True, type=Path)
+    restore_execute_parser.add_argument(
+        "--validation-policy",
+        required=True,
+        type=Path,
+    )
+    restore_execute_parser.add_argument("--destination-root", type=Path, default=None)
+    restore_execute_parser.add_argument("--staging-root", type=Path, default=None)
+    restore_execute_parser.add_argument("--rollback-root", type=Path, default=None)
+    restore_execute_parser.add_argument("--lock-path", type=Path, default=None)
+    restore_execute_parser.add_argument("--executions-root", type=Path, default=None)
+    restore_execute_parser.add_argument("--confirm-execution", action="store_true")
+
     return parser
 
 
@@ -283,6 +307,26 @@ def _restore_planning_rollback_root(arguments, restore_tests_root: Path) -> Path
     if arguments.rollback_root is not None:
         return arguments.rollback_root
     return restore_tests_root / "Planning" / "Rollback"
+
+
+def _restore_execution_staging_root(arguments, restore_tests_root: Path) -> Path:
+    return arguments.staging_root or restore_tests_root / "Execution" / "Staging"
+
+
+def _restore_execution_rollback_root(arguments, restore_tests_root: Path) -> Path:
+    return arguments.rollback_root or restore_tests_root / "Execution" / "Rollback"
+
+
+def _restore_execution_lock_path(arguments, restore_tests_root: Path) -> Path:
+    return (
+        arguments.lock_path or restore_tests_root / "Execution" / "Locks" / "restore-execution.lock"
+    )
+
+
+def _restore_execution_records_root(arguments, reports_root: Path) -> Path:
+    return (
+        arguments.executions_root or reports_root / "Backup-Orchestrator" / "Restore" / "Executions"
+    )
 
 
 def _find_recovery_point(
@@ -540,6 +584,68 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 return 0
 
+            if arguments.restore_command == "execute":
+                if not arguments.confirm_execution:
+                    print(
+                        "ERROR: --confirm-execution is required for restore execution.",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+                _require_valid_repository()
+                evaluated = evaluate_recovery_point(
+                    point,
+                    evaluated_at_utc=evaluated_at_utc,
+                )
+                plan = build_restore_plan(
+                    evaluated,
+                    RestorePlanRequest(
+                        recovery_point_id=evaluated.recovery_point_id,
+                        authoritative_target_path=arguments.target,
+                        staging_root=_restore_execution_staging_root(
+                            arguments,
+                            context.config.paths.restore_tests_root,
+                        ),
+                        rollback_root=_restore_execution_rollback_root(
+                            arguments,
+                            context.config.paths.restore_tests_root,
+                        ),
+                    ),
+                    created_at_utc=evaluated_at_utc,
+                )
+                if plan.validation.readiness is not RestorePlanReadiness.READY:
+                    print(
+                        "ERROR: Restore plan is not ready for execution: "
+                        f"{plan.validation.readiness.value}",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+                lock_path = _restore_execution_lock_path(
+                    arguments,
+                    context.config.paths.restore_tests_root,
+                )
+                lock_path.parent.mkdir(parents=True, exist_ok=True, mode=0o770)
+                policy = load_restore_validation_policy(arguments.validation_policy)
+                record = build_restore_execution_orchestrator(
+                    validation_policy=policy,
+                ).execute(plan, lock_path=lock_path)
+                publication = RestoreExecutionRecordPublisher(
+                    _restore_execution_records_root(
+                        arguments,
+                        context.config.paths.reports_root,
+                    )
+                ).publish(record)
+
+                print("POE Backup Orchestrator — Restore Execution")
+                print(f"Plan ID: {record.plan_id}")
+                print(f"Authoritative target: {record.plan.authoritative_target_path}")
+                print("Restore completed: yes")
+                print(f"Execution record: {publication.json_path}")
+                print(f"SHA-256: {publication.sha256}")
+                print(f"Bytes: {publication.bytes_written}")
+                return 0
+
             if arguments.restore_command == "plan":
                 if arguments.eligibility_override and not (
                     arguments.operator_rationale and arguments.operator_rationale.strip()
@@ -577,7 +683,12 @@ def main(argv: Sequence[str] | None = None) -> int:
                 _print_restore_plan(plan)
                 return 0
 
-    except (RecoveryPointDiscoveryError, RestorePlanningError) as exc:
+    except (
+        RecoveryPointDiscoveryError,
+        RestoreExecutionRecordPublicationError,
+        RestorePlanningError,
+        RestoreValidationPolicyError,
+    ) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     except OperationalReportingError as exc:
