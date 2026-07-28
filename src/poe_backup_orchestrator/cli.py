@@ -15,7 +15,12 @@ from poe_backup_orchestrator.exceptions import (
     OrchestratorError,
     RepositoryValidationError,
 )
-from poe_backup_orchestrator.models import RegistryBackupRequest, RuntimeEnvironment
+from poe_backup_orchestrator.models import (
+    RegistryBackupRequest,
+    RestorePlan,
+    RestorePlanRequest,
+    RuntimeEnvironment,
+)
 from poe_backup_orchestrator.models.recovery import RecoveryPoint
 from poe_backup_orchestrator.services import (
     REPORTING_FAILURE_EXIT_CODE,
@@ -27,6 +32,8 @@ from poe_backup_orchestrator.services import (
 )
 from poe_backup_orchestrator.services.restore import (
     RecoveryPointDiscoveryError,
+    RestorePlanningError,
+    build_restore_plan,
     discover_recovery_points,
     evaluate_recovery_point,
 )
@@ -161,6 +168,51 @@ def build_parser() -> argparse.ArgumentParser:
             "Accepted Registry destination root (default: <repository_root>/Registry/POERegistry)."
         ),
     )
+
+    restore_plan_parser = restore_subparsers.add_parser(
+        "plan",
+        help="Construct a deterministic, non-executing Registry restore plan.",
+    )
+    restore_plan_parser.add_argument("--backup-id", required=True)
+    restore_plan_parser.add_argument(
+        "--target",
+        required=True,
+        type=Path,
+        help="Authoritative Registry SQLite target path proposed for restoration.",
+    )
+    restore_plan_parser.add_argument(
+        "--destination-root",
+        type=Path,
+        default=None,
+        help=(
+            "Accepted Registry destination root (default: <repository_root>/Registry/POERegistry)."
+        ),
+    )
+    restore_plan_parser.add_argument(
+        "--staging-root",
+        type=Path,
+        default=None,
+        help=(
+            "Governed restore planning staging root "
+            "(default: <restore_tests_root>/Planning/Staging)."
+        ),
+    )
+    restore_plan_parser.add_argument(
+        "--rollback-root",
+        type=Path,
+        default=None,
+        help=("Governed rollback planning root (default: <restore_tests_root>/Planning/Rollback)."),
+    )
+    restore_plan_parser.add_argument(
+        "--eligibility-override",
+        action="store_true",
+        help="Record an operator request for governed eligibility override.",
+    )
+    restore_plan_parser.add_argument(
+        "--operator-rationale",
+        default=None,
+        help="Required rationale when --eligibility-override is supplied.",
+    )
     return parser
 
 
@@ -221,6 +273,18 @@ def _restore_destination_root(arguments, repository_root: Path) -> Path:
     return repository_root / "Registry" / "POERegistry"
 
 
+def _restore_planning_staging_root(arguments, restore_tests_root: Path) -> Path:
+    if arguments.staging_root is not None:
+        return arguments.staging_root
+    return restore_tests_root / "Planning" / "Staging"
+
+
+def _restore_planning_rollback_root(arguments, restore_tests_root: Path) -> Path:
+    if arguments.rollback_root is not None:
+        return arguments.rollback_root
+    return restore_tests_root / "Planning" / "Rollback"
+
+
 def _find_recovery_point(
     recovery_points: tuple[RecoveryPoint, ...],
     backup_id: str,
@@ -275,6 +339,44 @@ def _print_recovery_point(
     print(f"Policy version: {point.eligibility.policy_version}")
     for warning in point.eligibility.warnings:
         print(f"Warning: {warning}")
+
+
+def _print_restore_plan(plan: RestorePlan) -> None:
+    print("POE Backup Orchestrator — Restore Plan")
+    print(f"Plan ID: {plan.plan_id}")
+    print(f"Schema version: {plan.schema_version}")
+    print(f"Policy version: {plan.policy_version}")
+    print(f"Created (UTC): {plan.created_at_utc.isoformat()}")
+    print(f"Recovery point: {plan.recovery_point_id}")
+    print(f"Source artifact: {plan.source_artifact_path}")
+    print(f"Source manifest: {plan.source_manifest_path}")
+    print(f"Authoritative target: {plan.authoritative_target_path}")
+    print(f"Staging target: {plan.staging_target_path}")
+    print(f"Rollback artifact: {plan.rollback_artifact_path}")
+    print(f"Readiness: {plan.validation.readiness.value}")
+    reasons = ", ".join(reason.value for reason in plan.validation.reason_codes)
+    print(f"Reason codes: {reasons}")
+    print(f"Approval required: {'yes' if plan.validation.approval_required else 'no'}")
+    print(f"Execution authorized: {'yes' if plan.execution_authorized else 'no'}")
+
+    for warning in plan.validation.warnings:
+        print(f"Warning [{warning.code}]: {warning.message}")
+    for conflict in plan.validation.conflicts:
+        print(
+            f"Conflict [{conflict.code}]: {conflict.message} "
+            f"(blocking={'yes' if conflict.blocking else 'no'}, "
+            f"approval-resolvable={'yes' if conflict.approval_can_resolve else 'no'})"
+        )
+
+    print("Planned actions:")
+    for action in plan.actions:
+        print(f"  {action.ordinal}. {action.action_type.value}: {action.description}")
+        if action.source_path is not None:
+            print(f"     Source: {action.source_path}")
+        if action.destination_path is not None:
+            print(f"     Destination: {action.destination_path}")
+        print(f"     Mutates state: {'yes' if action.mutates_state else 'no'}")
+        print(f"     Approval required: {'yes' if action.approval_required else 'no'}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -438,7 +540,44 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
                 return 0
 
-    except RecoveryPointDiscoveryError as exc:
+            if arguments.restore_command == "plan":
+                if arguments.eligibility_override and not (
+                    arguments.operator_rationale and arguments.operator_rationale.strip()
+                ):
+                    print(
+                        "ERROR: --operator-rationale is required when "
+                        "--eligibility-override is supplied.",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+                evaluated = evaluate_recovery_point(
+                    point,
+                    evaluated_at_utc=evaluated_at_utc,
+                )
+                request = RestorePlanRequest(
+                    recovery_point_id=evaluated.recovery_point_id,
+                    authoritative_target_path=arguments.target,
+                    staging_root=_restore_planning_staging_root(
+                        arguments,
+                        context.config.paths.restore_tests_root,
+                    ),
+                    rollback_root=_restore_planning_rollback_root(
+                        arguments,
+                        context.config.paths.restore_tests_root,
+                    ),
+                    eligibility_override_requested=arguments.eligibility_override,
+                    operator_rationale=arguments.operator_rationale,
+                )
+                plan = build_restore_plan(
+                    evaluated,
+                    request,
+                    created_at_utc=evaluated_at_utc,
+                )
+                _print_restore_plan(plan)
+                return 0
+
+    except (RecoveryPointDiscoveryError, RestorePlanningError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
     except OperationalReportingError as exc:

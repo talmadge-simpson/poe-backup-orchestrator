@@ -728,3 +728,198 @@ def test_restore_list_returns_controlled_discovery_error(
 
     assert exit_code == 1
     assert "destination root unavailable" in captured.err
+
+
+def test_restore_plan_is_present_in_restore_help(capsys) -> None:
+    from poe_backup_orchestrator.cli import build_parser
+
+    parser = build_parser()
+    with __import__("pytest").raises(SystemExit) as raised:
+        parser.parse_args(["restore", "--help"])
+
+    captured = capsys.readouterr()
+    assert raised.value.code == 0
+    assert "plan" in captured.out
+
+
+def test_restore_plan_constructs_and_renders_plan_with_governed_defaults(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    from dataclasses import replace
+    from datetime import UTC, datetime
+
+    from poe_backup_orchestrator.models import (
+        RecoveryPointEligibility,
+        RecoveryPointEligibilityResult,
+        RecoveryPointReasonCode,
+    )
+    from poe_backup_orchestrator.services.restore import (
+        build_restore_plan as real_build_restore_plan,
+    )
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    point = _recovery_point_fixture()
+    received = {}
+
+    eligible = replace(
+        point,
+        eligibility=RecoveryPointEligibilityResult(
+            classification=RecoveryPointEligibility.ELIGIBLE,
+            reason_codes=(RecoveryPointReasonCode.RECOVERY_POINT_ELIGIBLE,),
+            warnings=("Recovery point satisfies the current eligibility policy.",),
+            override_required=False,
+            evaluated_at_utc=datetime(2026, 7, 28, 14, 0, tzinfo=UTC),
+            policy_version="5A.4",
+        ),
+    )
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.discover_recovery_points",
+        lambda destination_root, *, evaluated_at_utc: (point,),
+    )
+
+    def fake_evaluate(candidate, *, evaluated_at_utc):
+        received["evaluated_candidate"] = candidate
+        received["evaluated_at_utc"] = evaluated_at_utc
+        return replace(
+            eligible,
+            eligibility=replace(
+                eligible.eligibility,
+                evaluated_at_utc=evaluated_at_utc,
+            ),
+        )
+
+    def fake_build(candidate, request, *, created_at_utc):
+        received["planned_candidate"] = candidate
+        received["request"] = request
+        received["created_at_utc"] = created_at_utc
+        return real_build_restore_plan(
+            candidate,
+            request,
+            created_at_utc=created_at_utc,
+        )
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.evaluate_recovery_point",
+        fake_evaluate,
+    )
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.build_restore_plan",
+        fake_build,
+    )
+
+    target = tmp_path / "authoritative" / "poe-registry.sqlite3"
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "restore",
+            "plan",
+            "--backup-id",
+            point.recovery_point_id,
+            "--target",
+            str(target),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert received["evaluated_candidate"] == point
+    assert received["planned_candidate"].eligibility.classification is (
+        RecoveryPointEligibility.ELIGIBLE
+    )
+    assert received["created_at_utc"] == received["evaluated_at_utc"]
+    request = received["request"]
+    assert request.authoritative_target_path == target
+    assert request.staging_root == Path("/tmp/restore-tests/Planning/Staging")
+    assert request.rollback_root == Path("/tmp/restore-tests/Planning/Rollback")
+    assert request.eligibility_override_requested is False
+    assert "POE Backup Orchestrator — Restore Plan" in captured.out
+    assert "Readiness: ready" in captured.out
+    assert f"Authoritative target: {target}" in captured.out
+    assert "Execution authorized: no" in captured.out
+    assert "1. inspect_target" in captured.out
+    assert "9. publish_restore_evidence" in captured.out
+
+
+def test_restore_plan_requires_rationale_for_override(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    point = _recovery_point_fixture()
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.discover_recovery_points",
+        lambda destination_root, *, evaluated_at_utc: (point,),
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "restore",
+            "plan",
+            "--backup-id",
+            point.recovery_point_id,
+            "--target",
+            str(tmp_path / "registry.sqlite3"),
+            "--eligibility-override",
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "--operator-rationale is required" in captured.err
+
+
+def test_restore_plan_returns_controlled_planning_error(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    from poe_backup_orchestrator.services.restore import RestorePlanningError
+
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    point = _recovery_point_fixture()
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.discover_recovery_points",
+        lambda destination_root, *, evaluated_at_utc: (point,),
+    )
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.evaluate_recovery_point",
+        lambda candidate, *, evaluated_at_utc: candidate,
+    )
+
+    def fail_planning(candidate, request, *, created_at_utc):
+        del candidate, request, created_at_utc
+        raise RestorePlanningError("restore planning failed")
+
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.build_restore_plan",
+        fail_planning,
+    )
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "restore",
+            "plan",
+            "--backup-id",
+            point.recovery_point_id,
+            "--target",
+            str(tmp_path / "registry.sqlite3"),
+        ]
+    )
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "restore planning failed" in captured.err
