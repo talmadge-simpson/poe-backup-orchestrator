@@ -9,6 +9,9 @@ from poe_backup_orchestrator.services.restore.authoritative_target_preflight imp
     RestoreAuthoritativeTargetPreflightService,
     preflight_authoritative_target,
 )
+from poe_backup_orchestrator.services.restore.composition import (
+    build_restore_execution_orchestrator,
+)
 from poe_backup_orchestrator.services.restore.discovery import (
     DEFAULT_DISCOVERY_POLICY_VERSION,
     DEFAULT_RECOVERY_MANIFEST_FILENAME,
@@ -80,8 +83,15 @@ from poe_backup_orchestrator.services.restore.staging import (
     RestoreArtifactStagingService,
     stage_restore_artifact,
 )
+from poe_backup_orchestrator.services.restore.validation_policy import (
+    RestoreValidationPolicyError,
+    load_restore_validation_policy,
+)
 
 __all__ = [
+    "RestoreValidationPolicyError",
+    "build_restore_execution_orchestrator",
+    "load_restore_validation_policy",
     "RestoreExecutionOrchestrator",
     "DEFAULT_ELIGIBILITY_POLICY_VERSION",
     "evaluate_recovery_point",

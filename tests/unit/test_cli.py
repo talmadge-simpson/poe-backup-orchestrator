@@ -923,3 +923,45 @@ def test_restore_plan_returns_controlled_planning_error(
 
     assert exit_code == 1
     assert "restore planning failed" in captured.err
+
+
+def test_restore_execute_is_present_in_help(capsys) -> None:
+    from poe_backup_orchestrator.cli import build_parser
+
+    parser = build_parser()
+    with __import__("pytest").raises(SystemExit) as raised:
+        parser.parse_args(["restore", "--help"])
+    captured = capsys.readouterr()
+    assert raised.value.code == 0
+    assert "execute" in captured.out
+
+
+def test_restore_execute_requires_confirmation(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    config_path = tmp_path / "orchestrator.toml"
+    write_test_config(config_path)
+    point = _recovery_point_fixture()
+    monkeypatch.setattr(
+        "poe_backup_orchestrator.cli.discover_recovery_points",
+        lambda destination_root, *, evaluated_at_utc: (point,),
+    )
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "restore",
+            "execute",
+            "--backup-id",
+            point.recovery_point_id,
+            "--target",
+            str(tmp_path / "registry.sqlite3"),
+            "--validation-policy",
+            str(tmp_path / "policy.toml"),
+        ]
+    )
+    captured = capsys.readouterr()
+    assert exit_code == 1
+    assert "--confirm-execution is required" in captured.err
