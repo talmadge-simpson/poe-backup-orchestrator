@@ -45,6 +45,11 @@ from poe_backup_orchestrator.services.restore.registry_application_validation im
     RestoreRegistryApplicationValidationService,
     validate_staged_registry_application,
 )
+from poe_backup_orchestrator.services.restore.rollback_artifact_capture import (
+    RestoreRollbackArtifactCaptureError,
+    RestoreRollbackArtifactCaptureService,
+    capture_rollback_artifact,
+)
 from poe_backup_orchestrator.services.restore.staged_validation import (
     ArtifactIntegrityOperator,
     LocalArtifactIntegrityOperator,
@@ -100,4 +105,7 @@ __all__ = [
     "RestoreAuthoritativeTargetPreflightError",
     "RestoreAuthoritativeTargetPreflightService",
     "preflight_authoritative_target",
+    "RestoreRollbackArtifactCaptureError",
+    "RestoreRollbackArtifactCaptureService",
+    "capture_rollback_artifact",
 ]

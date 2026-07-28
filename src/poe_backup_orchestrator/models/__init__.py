@@ -91,6 +91,13 @@ from poe_backup_orchestrator.models.restore_registry_application_validation impo
     RestoreRegistryApplicationValidationStatus,
     RowCountInvariantOperator,
 )
+from poe_backup_orchestrator.models.restore_rollback_artifact_capture import (
+    RESTORE_ROLLBACK_ARTIFACT_CAPTURE_SCHEMA_VERSION,
+    RestoreRollbackArtifactCapture,
+    RestoreRollbackArtifactCaptureReasonCode,
+    RestoreRollbackArtifactCaptureStatus,
+    RestoreRollbackArtifactObservation,
+)
 from poe_backup_orchestrator.models.restore_staged_artifact_validation import (
     RESTORE_STAGED_ARTIFACT_VALIDATION_SCHEMA_VERSION,
     RestoreStagedArtifactValidation,
@@ -180,6 +187,11 @@ __all__ = [
     "RestoreAuthoritativeTargetPreflightStatus",
     "RestoreAuthoritativeTargetState",
     "RestoreRollbackPlan",
+    "RESTORE_ROLLBACK_ARTIFACT_CAPTURE_SCHEMA_VERSION",
+    "RestoreRollbackArtifactCapture",
+    "RestoreRollbackArtifactCaptureReasonCode",
+    "RestoreRollbackArtifactCaptureStatus",
+    "RestoreRollbackArtifactObservation",
 ]
 
 __all__ += [
