@@ -37,6 +37,10 @@ from poe_backup_orchestrator.services.restore.planning import (
     RestorePlanningService,
     build_restore_plan,
 )
+from poe_backup_orchestrator.services.restore.post_promotion_verification import (
+    RestorePostPromotionVerificationError,
+    RestorePostPromotionVerificationService,
+)
 from poe_backup_orchestrator.services.restore.preflight import (
     LocalWorkspacePathProbe,
     RestoreWorkspacePreflightError,
@@ -122,4 +126,6 @@ __all__ = [
     "RestorePromotionReadinessService",
     "RestoreAuthoritativePromotionError",
     "RestoreAuthoritativePromotionService",
+    "RestorePostPromotionVerificationError",
+    "RestorePostPromotionVerificationService",
 ]

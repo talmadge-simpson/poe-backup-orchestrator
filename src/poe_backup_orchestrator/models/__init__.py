@@ -87,6 +87,12 @@ from poe_backup_orchestrator.models.restore_plan import (
     RestorePlanValidation,
     RestoreWarning,
 )
+from poe_backup_orchestrator.models.restore_post_promotion_verification import (
+    RESTORE_POST_PROMOTION_VERIFICATION_SCHEMA_VERSION,
+    RestorePostPromotionVerification,
+    RestorePostPromotionVerificationReasonCode,
+    RestorePostPromotionVerificationStatus,
+)
 from poe_backup_orchestrator.models.restore_promotion_readiness import (
     RESTORE_PROMOTION_READINESS_SCHEMA_VERSION,
     RestoreExecutionOwnership,
@@ -216,6 +222,10 @@ __all__ = [
     "RestoreAuthoritativePromotion",
     "RestoreAuthoritativePromotionReasonCode",
     "RestoreAuthoritativePromotionStatus",
+    "RESTORE_POST_PROMOTION_VERIFICATION_SCHEMA_VERSION",
+    "RestorePostPromotionVerification",
+    "RestorePostPromotionVerificationReasonCode",
+    "RestorePostPromotionVerificationStatus",
 ]
 
 __all__ += [
