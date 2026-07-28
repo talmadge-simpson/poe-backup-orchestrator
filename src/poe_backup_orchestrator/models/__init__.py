@@ -53,6 +53,12 @@ from poe_backup_orchestrator.models.registry_acceptance import (
 )
 from poe_backup_orchestrator.models.registry_ingestion import RegistryIngestionResult
 from poe_backup_orchestrator.models.repository import RepositoryValidationResult
+from poe_backup_orchestrator.models.restore_artifact_staging import (
+    RESTORE_ARTIFACT_STAGING_SCHEMA_VERSION,
+    RestoreArtifactStaging,
+    RestoreArtifactStagingReasonCode,
+    RestoreArtifactStagingStatus,
+)
 from poe_backup_orchestrator.models.restore_plan import (
     RESTORE_PLAN_POLICY_VERSION,
     RESTORE_PLAN_SCHEMA_VERSION,
@@ -126,6 +132,10 @@ __all__ = [
     "RestoreWorkspaceMaterialization",
     "RestoreWorkspaceMaterializationReasonCode",
     "RestoreWorkspaceMaterializationStatus",
+    "RESTORE_ARTIFACT_STAGING_SCHEMA_VERSION",
+    "RestoreArtifactStaging",
+    "RestoreArtifactStagingReasonCode",
+    "RestoreArtifactStagingStatus",
 ]
 
 __all__ += [
