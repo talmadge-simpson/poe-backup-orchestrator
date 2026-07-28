@@ -73,6 +73,13 @@ from poe_backup_orchestrator.models.restore_workspace import (
     RestoreWorkspacePreflightReadiness,
     RestoreWorkspacePreflightReasonCode,
 )
+from poe_backup_orchestrator.models.restore_workspace_materialization import (
+    RESTORE_WORKSPACE_MATERIALIZATION_SCHEMA_VERSION,
+    RestoreWorkspaceDirectoryRecord,
+    RestoreWorkspaceMaterialization,
+    RestoreWorkspaceMaterializationReasonCode,
+    RestoreWorkspaceMaterializationStatus,
+)
 from poe_backup_orchestrator.models.runtime import (
     RUNTIME_STATE_SCHEMA_VERSION,
     RuntimeDescriptor,
@@ -114,6 +121,11 @@ __all__ = [
     "RestoreWorkspacePreflightCheck",
     "RestoreWorkspacePreflightReadiness",
     "RestoreWorkspacePreflightReasonCode",
+    "RESTORE_WORKSPACE_MATERIALIZATION_SCHEMA_VERSION",
+    "RestoreWorkspaceDirectoryRecord",
+    "RestoreWorkspaceMaterialization",
+    "RestoreWorkspaceMaterializationReasonCode",
+    "RestoreWorkspaceMaterializationStatus",
 ]
 
 __all__ += [
