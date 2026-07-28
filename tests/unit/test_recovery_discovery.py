@@ -296,3 +296,57 @@ def test_discover_recovery_points_requires_utc_evaluation_timestamp(
             tmp_path,
             evaluated_at_utc=datetime(2026, 7, 27, 18, 0),
         )
+
+
+def test_locate_recovery_point_packages_translates_permission_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    original_resolve = Path.resolve
+
+    def denied_resolve(path: Path, *args, **kwargs) -> Path:
+        if path == tmp_path:
+            raise PermissionError("permission denied")
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", denied_resolve)
+    with pytest.raises(RecoveryPointDiscoveryError, match="unable to inspect"):
+        locate_recovery_point_packages(tmp_path)
+
+
+def test_discover_recovery_points_supports_legacy_manifest_filename(tmp_path: Path) -> None:
+    package = create_package(tmp_path, "20260725T160902Z")
+    legacy = package / "poe-registry_20260725T160902Z.manifest.json"
+    legacy.write_text(
+        json.dumps(
+            manifest_payload(
+                created_at="2026-07-25T16:09:02Z", filename="poe-registry_20260725T160902Z.sqlite3"
+            ),
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    point = discover_recovery_points(tmp_path, evaluated_at_utc=EVALUATED_AT)[0]
+    assert point.manifest_path == legacy.resolve()
+    assert point.created_at_utc == datetime(2026, 7, 25, 16, 9, 2, tzinfo=UTC)
+    assert point.verification_status == "PASS"
+
+
+def test_discover_recovery_points_populates_structured_source_metadata(tmp_path: Path) -> None:
+    payload = manifest_payload(
+        asset_id="poeregistry",
+        created_at="2026-07-26T18:07:57Z",
+        filename="poeregistry_20260726T180757Z.sqlite3",
+    )
+    payload["source"] = {
+        "path": (
+            "/srv/poe-nas/Incoming/Registry-Acquisition/"
+            "poe-registry/poe-registry_20260725T160902Z.sqlite3"
+        )
+    }
+    create_package(tmp_path, "20260726T180757Z", payload=payload)
+    point = discover_recovery_points(tmp_path, evaluated_at_utc=EVALUATED_AT)[0]
+    assert point.created_at_utc == datetime(2026, 7, 26, 18, 7, 57, tzinfo=UTC)
+    assert point.source_registry_id == "poeregistry"
+    assert point.manifest_version == "1.0"
+    assert point.verification_status == "PASS"

@@ -240,3 +240,13 @@ def test_read_recovery_manifest_preserves_manifest_last_false(
     manifest = read_recovery_manifest(write_manifest(tmp_path, payload))
 
     assert manifest.publication.manifest_published_last is False
+
+
+def test_read_recovery_manifest_accepts_structured_source_path(tmp_path: Path) -> None:
+    payload = valid_manifest()
+    payload["source"] = {
+        "hostname": "DSKTOP-WIN-000",
+        "path": r"C:\POE\registry\runtime\POERegistry.db",
+    }
+    manifest = read_recovery_manifest(write_manifest(tmp_path, payload))
+    assert manifest.source_path == Path(r"C:\POE\registry\runtime\POERegistry.db")

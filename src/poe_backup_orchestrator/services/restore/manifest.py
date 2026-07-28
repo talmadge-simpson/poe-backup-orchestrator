@@ -274,8 +274,28 @@ def _required_utc_timestamp(data: dict[str, Any], key: str) -> datetime:
 
 
 def _optional_path(data: dict[str, Any], key: str) -> Path | None:
-    value = _optional_string(data, key)
-    return None if value is None else Path(value)
+    if key not in data:
+        return None
+
+    value = data[key]
+    if isinstance(value, str):
+        normalized = value.strip()
+        if not normalized:
+            raise RecoveryManifestError(
+                RecoveryManifestFaultCode.FIELD_VALUE_INVALID,
+                f"manifest field must not be empty: {key}",
+                field_path=key,
+            )
+        return Path(normalized)
+
+    if isinstance(value, dict):
+        return Path(_required_string(value, "path", parent=key))
+
+    raise RecoveryManifestError(
+        RecoveryManifestFaultCode.FIELD_TYPE_INVALID,
+        f"manifest field must be a string or object: {key}",
+        field_path=key,
+    )
 
 
 def _build_snapshot(data: dict[str, Any]) -> RecoveryManifestSnapshot:

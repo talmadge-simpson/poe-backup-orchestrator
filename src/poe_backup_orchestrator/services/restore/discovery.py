@@ -19,6 +19,7 @@ from poe_backup_orchestrator.services.restore.manifest import (
 )
 
 DEFAULT_RECOVERY_MANIFEST_FILENAME: Final[str] = "manifest.json"
+LEGACY_RECOVERY_MANIFEST_PATTERN: Final[str] = "*.manifest.json"
 DEFAULT_DISCOVERY_POLICY_VERSION: Final[str] = "5A.3-discovery"
 
 _IGNORED_PACKAGE_SUFFIXES: Final[tuple[str, ...]] = (
@@ -59,15 +60,18 @@ def locate_recovery_point_packages(destination_root: Path) -> tuple[Path, ...]:
     Hidden directories and known temporary publication directories are excluded.
     """
 
-    root = Path(destination_root).expanduser().resolve()
-    if not root.exists():
-        raise RecoveryPointDiscoveryError(f"recovery-point destination root does not exist: {root}")
-    if not root.is_dir():
-        raise RecoveryPointDiscoveryError(
-            f"recovery-point destination root is not a directory: {root}"
-        )
-
+    root = Path(destination_root).expanduser()
     try:
+        root = root.resolve()
+        if not root.exists():
+            raise RecoveryPointDiscoveryError(
+                f"recovery-point destination root does not exist: {root}"
+            )
+        if not root.is_dir():
+            raise RecoveryPointDiscoveryError(
+                f"recovery-point destination root is not a directory: {root}"
+            )
+
         candidates = tuple(
             sorted(
                 (
@@ -78,9 +82,11 @@ def locate_recovery_point_packages(destination_root: Path) -> tuple[Path, ...]:
                 key=lambda value: value.name,
             )
         )
+    except RecoveryPointDiscoveryError:
+        raise
     except OSError as exc:
         raise RecoveryPointDiscoveryError(
-            f"unable to enumerate recovery-point destination root {root}: {exc}"
+            f"unable to inspect recovery-point destination root {root}: {exc}"
         ) from exc
 
     return candidates
@@ -117,11 +123,19 @@ def _discover_package(
     evaluated_at_utc: datetime,
     policy_version: str,
 ) -> RecoveryPoint:
-    manifest_path = package_path / DEFAULT_RECOVERY_MANIFEST_FILENAME
-
     try:
+        manifest_path = _locate_manifest_path(package_path)
         manifest = read_recovery_manifest(manifest_path)
+    except OSError as exc:
+        raise RecoveryPointDiscoveryError(
+            f"unable to inspect recovery-point package {package_path}: {exc}"
+        ) from exc
     except RecoveryManifestError as exc:
+        if isinstance(exc.__cause__, PermissionError):
+            raise RecoveryPointDiscoveryError(
+                "permission denied while reading recovery-point package "
+                f"{package_path}: {exc.__cause__}"
+            ) from exc
         return RecoveryPoint(
             recovery_point_id=package_path.name,
             package_path=package_path,
@@ -166,6 +180,22 @@ def _discover_package(
             warning="Recovery point discovered; eligibility has not been evaluated.",
         ),
     )
+
+
+def _locate_manifest_path(package_path: Path) -> Path:
+    canonical = package_path / DEFAULT_RECOVERY_MANIFEST_FILENAME
+    if canonical.is_file():
+        return canonical
+
+    legacy_candidates = tuple(
+        sorted(
+            package_path.glob(LEGACY_RECOVERY_MANIFEST_PATTERN),
+            key=lambda value: value.name,
+        )
+    )
+    if legacy_candidates:
+        return legacy_candidates[0]
+    return canonical
 
 
 def _unknown_eligibility(
