@@ -1,9 +1,9 @@
 # POE Backup Orchestrator
 ## Architecture Intent — Slice 5B-1 Restore Plan Domain Contract
 
-**Document ID:** POE-BO-Architecture-Intent-Slice-5B1  
-**Status:** Implementation Baseline  
-**Phase:** 5B — Governed Restore Planning  
+**Document ID:** POE-BO-Architecture-Intent-Slice-5B1
+**Status:** Implementation Baseline
+**Phase:** 5B — Governed Restore Planning
 **Slice:** 5B-1 — Restore Plan Domain Contract
 
 ## Purpose
