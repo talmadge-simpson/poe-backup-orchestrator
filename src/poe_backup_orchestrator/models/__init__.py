@@ -66,6 +66,13 @@ from poe_backup_orchestrator.models.restore_plan import (
     RestorePlanValidation,
     RestoreWarning,
 )
+from poe_backup_orchestrator.models.restore_workspace import (
+    RESTORE_WORKSPACE_PREFLIGHT_SCHEMA_VERSION,
+    RestoreWorkspacePreflight,
+    RestoreWorkspacePreflightCheck,
+    RestoreWorkspacePreflightReadiness,
+    RestoreWorkspacePreflightReasonCode,
+)
 from poe_backup_orchestrator.models.runtime import (
     RUNTIME_STATE_SCHEMA_VERSION,
     RuntimeDescriptor,
@@ -102,6 +109,11 @@ __all__ = [
     "RegistryIngestionResult",
     "RepositoryValidationResult",
     "SqliteBackupResult",
+    "RESTORE_WORKSPACE_PREFLIGHT_SCHEMA_VERSION",
+    "RestoreWorkspacePreflight",
+    "RestoreWorkspacePreflightCheck",
+    "RestoreWorkspacePreflightReadiness",
+    "RestoreWorkspacePreflightReasonCode",
 ]
 
 __all__ += [

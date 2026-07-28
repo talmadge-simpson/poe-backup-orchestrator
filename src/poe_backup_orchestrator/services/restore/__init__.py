@@ -21,6 +21,13 @@ from poe_backup_orchestrator.services.restore.planning import (
     RestorePlanningService,
     build_restore_plan,
 )
+from poe_backup_orchestrator.services.restore.preflight import (
+    LocalWorkspacePathProbe,
+    RestoreWorkspacePreflightError,
+    RestoreWorkspacePreflightService,
+    WorkspacePathProbe,
+    preflight_restore_workspace,
+)
 
 __all__ = [
     "DEFAULT_ELIGIBILITY_POLICY_VERSION",
@@ -36,4 +43,9 @@ __all__ = [
     "RestorePlanningError",
     "RestorePlanningService",
     "build_restore_plan",
+    "LocalWorkspacePathProbe",
+    "RestoreWorkspacePreflightError",
+    "RestoreWorkspacePreflightService",
+    "WorkspacePathProbe",
+    "preflight_restore_workspace",
 ]
