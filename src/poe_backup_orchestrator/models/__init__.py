@@ -59,6 +59,12 @@ from poe_backup_orchestrator.models.restore_artifact_staging import (
     RestoreArtifactStagingReasonCode,
     RestoreArtifactStagingStatus,
 )
+from poe_backup_orchestrator.models.restore_authoritative_promotion import (
+    RESTORE_AUTHORITATIVE_PROMOTION_SCHEMA_VERSION,
+    RestoreAuthoritativePromotion,
+    RestoreAuthoritativePromotionReasonCode,
+    RestoreAuthoritativePromotionStatus,
+)
 from poe_backup_orchestrator.models.restore_authoritative_target_preflight import (
     RESTORE_AUTHORITATIVE_TARGET_PREFLIGHT_SCHEMA_VERSION,
     RestoreAuthoritativeTargetObservation,
@@ -206,6 +212,10 @@ __all__ = [
     "RestorePromotionReadiness",
     "RestorePromotionReadinessReasonCode",
     "RestorePromotionReadinessStatus",
+    "RESTORE_AUTHORITATIVE_PROMOTION_SCHEMA_VERSION",
+    "RestoreAuthoritativePromotion",
+    "RestoreAuthoritativePromotionReasonCode",
+    "RestoreAuthoritativePromotionStatus",
 ]
 
 __all__ += [
