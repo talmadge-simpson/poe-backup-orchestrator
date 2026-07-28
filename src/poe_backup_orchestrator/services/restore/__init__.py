@@ -40,6 +40,11 @@ from poe_backup_orchestrator.services.restore.preflight import (
     WorkspacePathProbe,
     preflight_restore_workspace,
 )
+from poe_backup_orchestrator.services.restore.promotion_readiness import (
+    RestoreExecutionOwnershipHandle,
+    RestorePromotionReadinessError,
+    RestorePromotionReadinessService,
+)
 from poe_backup_orchestrator.services.restore.registry_application_validation import (
     RestoreRegistryApplicationValidationError,
     RestoreRegistryApplicationValidationService,
@@ -108,4 +113,7 @@ __all__ = [
     "RestoreRollbackArtifactCaptureError",
     "RestoreRollbackArtifactCaptureService",
     "capture_rollback_artifact",
+    "RestoreExecutionOwnershipHandle",
+    "RestorePromotionReadinessError",
+    "RestorePromotionReadinessService",
 ]
