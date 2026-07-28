@@ -16,6 +16,13 @@ from poe_backup_orchestrator.services.restore.manifest import (
     RecoveryManifestError,
     read_recovery_manifest,
 )
+from poe_backup_orchestrator.services.restore.materialization import (
+    LocalWorkspaceFilesystemOperator,
+    RestoreWorkspaceMaterializationError,
+    RestoreWorkspaceMaterializationService,
+    WorkspaceFilesystemOperator,
+    materialize_restore_workspace,
+)
 from poe_backup_orchestrator.services.restore.planning import (
     RestorePlanningError,
     RestorePlanningService,
@@ -48,4 +55,9 @@ __all__ = [
     "RestoreWorkspacePreflightService",
     "WorkspacePathProbe",
     "preflight_restore_workspace",
+    "LocalWorkspaceFilesystemOperator",
+    "RestoreWorkspaceMaterializationError",
+    "RestoreWorkspaceMaterializationService",
+    "WorkspaceFilesystemOperator",
+    "materialize_restore_workspace",
 ]
