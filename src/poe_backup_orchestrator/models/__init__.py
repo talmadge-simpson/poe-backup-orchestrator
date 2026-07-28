@@ -72,6 +72,12 @@ from poe_backup_orchestrator.models.restore_plan import (
     RestorePlanValidation,
     RestoreWarning,
 )
+from poe_backup_orchestrator.models.restore_staged_artifact_validation import (
+    RESTORE_STAGED_ARTIFACT_VALIDATION_SCHEMA_VERSION,
+    RestoreStagedArtifactValidation,
+    RestoreStagedArtifactValidationReasonCode,
+    RestoreStagedArtifactValidationStatus,
+)
 from poe_backup_orchestrator.models.restore_workspace import (
     RESTORE_WORKSPACE_PREFLIGHT_SCHEMA_VERSION,
     RestoreWorkspacePreflight,
@@ -136,6 +142,10 @@ __all__ = [
     "RestoreArtifactStaging",
     "RestoreArtifactStagingReasonCode",
     "RestoreArtifactStagingStatus",
+    "RESTORE_STAGED_ARTIFACT_VALIDATION_SCHEMA_VERSION",
+    "RestoreStagedArtifactValidation",
+    "RestoreStagedArtifactValidationReasonCode",
+    "RestoreStagedArtifactValidationStatus",
 ]
 
 __all__ += [
