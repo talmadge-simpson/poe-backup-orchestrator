@@ -35,6 +35,11 @@ from poe_backup_orchestrator.services.restore.preflight import (
     WorkspacePathProbe,
     preflight_restore_workspace,
 )
+from poe_backup_orchestrator.services.restore.registry_application_validation import (
+    RestoreRegistryApplicationValidationError,
+    RestoreRegistryApplicationValidationService,
+    validate_staged_registry_application,
+)
 from poe_backup_orchestrator.services.restore.staged_validation import (
     ArtifactIntegrityOperator,
     LocalArtifactIntegrityOperator,
@@ -84,4 +89,7 @@ __all__ = [
     "RestoreStagedArtifactValidationError",
     "RestoreStagedArtifactValidationService",
     "validate_staged_restore_artifact",
+    "RestoreRegistryApplicationValidationError",
+    "RestoreRegistryApplicationValidationService",
+    "validate_staged_registry_application",
 ]
