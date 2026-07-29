@@ -81,6 +81,10 @@ from poe_backup_orchestrator.services.runtime_validation import (
     validate_runtime,
 )
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
+from poe_backup_orchestrator.services.storage_discovery import (
+    FilesystemDiscoveryAdapter,
+    LocalFilesystemDiscoveryAdapter,
+)
 
 __all__ = [
     "build_runtime_recovery_inspector",
@@ -128,6 +132,8 @@ __all__ = [
     "publish_operational_report",
     "render_operational_summary",
     "validate_repository",
+    "FilesystemDiscoveryAdapter",
+    "LocalFilesystemDiscoveryAdapter",
 ]
 
 __all__ += [

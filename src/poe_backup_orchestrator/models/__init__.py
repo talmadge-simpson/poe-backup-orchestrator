@@ -162,6 +162,17 @@ from poe_backup_orchestrator.models.storage_baseline_manifest import (
     InventoryTotals,
     PreservationBaselineManifest,
 )
+from poe_backup_orchestrator.models.storage_discovery import (
+    STORAGE_DISCOVERY_SCHEMA_VERSION,
+    DiscoveredFilesystemEntry,
+    DiscoveryEntryType,
+    DiscoveryException,
+    DiscoveryExceptionCode,
+    DiscoveryPolicy,
+    DiscoveryStatus,
+    FilesystemDiscoveryRequest,
+    FilesystemDiscoveryResult,
+)
 from poe_backup_orchestrator.models.storage_inventory import (
     STORAGE_INVENTORY_SCHEMA_VERSION,
     DirectoryInventoryRecord,
@@ -278,6 +289,15 @@ __all__ = [
     "CaptureSessionStatus",
     "InventoryTotals",
     "PreservationBaselineManifest",
+    "STORAGE_DISCOVERY_SCHEMA_VERSION",
+    "DiscoveredFilesystemEntry",
+    "DiscoveryEntryType",
+    "DiscoveryException",
+    "DiscoveryExceptionCode",
+    "DiscoveryPolicy",
+    "DiscoveryStatus",
+    "FilesystemDiscoveryRequest",
+    "FilesystemDiscoveryResult",
 ]
 
 __all__ += [
