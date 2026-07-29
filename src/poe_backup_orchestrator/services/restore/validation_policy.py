@@ -26,8 +26,11 @@ def load_restore_validation_policy(path: Path) -> RegistryApplicationValidationP
     columns = document.get("required_columns")
     if not isinstance(policy, dict):
         raise RestoreValidationPolicyError("policy must be a TOML table")
+    tables_allowed_empty = policy.get("tables_allowed_empty", ())
     if not isinstance(columns, dict) or not columns:
         raise RestoreValidationPolicyError("required_columns must be a non-empty TOML table")
+    if not isinstance(tables_allowed_empty, list | tuple):
+        raise RestoreValidationPolicyError("tables_allowed_empty must be a TOML array")
 
     try:
         required_columns = tuple(
@@ -37,6 +40,7 @@ def load_restore_validation_policy(path: Path) -> RegistryApplicationValidationP
             policy_id=str(policy["id"]),
             policy_version=str(policy["version"]),
             required_columns=required_columns,
+            tables_allowed_empty=tuple(str(table) for table in tables_allowed_empty),
         )
     except (KeyError, TypeError, ValueError) as exc:
         raise RestoreValidationPolicyError(str(exc)) from exc

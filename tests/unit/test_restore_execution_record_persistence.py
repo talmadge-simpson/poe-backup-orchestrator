@@ -98,6 +98,9 @@ def test_publish_creates_immutable_json_and_evidence(tmp_path: Path) -> None:
     assert publication.plan_id == "plan-5e3"
     assert publication.json_path == expected
     assert publication.sha256 == hashlib.sha256(content).hexdigest()
+    sidecar = Path(f"{expected}.sha256")
+    assert sidecar.is_file()
+    assert sidecar.read_text(encoding="utf-8") == (f"{publication.sha256}  {expected.name}\n")
     assert publication.bytes_written == len(content)
     assert publication.idempotent is False
     assert expected.stat().st_mode & 0o777 == 0o600
@@ -114,6 +117,7 @@ def test_republishing_identical_record_is_idempotent(tmp_path: Path) -> None:
     assert first.sha256 == second.sha256
     assert second.idempotent is True
     assert len(list(tmp_path.glob("restore-execution-*.json"))) == 1
+    assert len(list(tmp_path.glob("restore-execution-*.json.sha256"))) == 1
 
 
 def test_existing_different_record_is_conflict(tmp_path: Path) -> None:
