@@ -85,6 +85,15 @@ from poe_backup_orchestrator.services.storage_discovery import (
     FilesystemDiscoveryAdapter,
     LocalFilesystemDiscoveryAdapter,
 )
+from poe_backup_orchestrator.services.storage_inventory_assembly import (
+    AssembledInventoryItem,
+    DiscoveryInventoryAssembler,
+    InventoryAssemblyContext,
+    InventoryAssemblyError,
+    InventoryAssemblyResult,
+    UnsupportedInventoryItem,
+    stable_inventory_item_id,
+)
 
 __all__ = [
     "build_runtime_recovery_inspector",
@@ -134,6 +143,13 @@ __all__ = [
     "validate_repository",
     "FilesystemDiscoveryAdapter",
     "LocalFilesystemDiscoveryAdapter",
+    "AssembledInventoryItem",
+    "DiscoveryInventoryAssembler",
+    "InventoryAssemblyContext",
+    "InventoryAssemblyError",
+    "InventoryAssemblyResult",
+    "UnsupportedInventoryItem",
+    "stable_inventory_item_id",
 ]
 
 __all__ += [
