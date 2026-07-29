@@ -221,6 +221,7 @@ class FileInventoryRecord:
     capture_status: InventoryCaptureStatus
     exclusion_reason: str | None = None
     error_detail: str | None = None
+    captured_at_utc: datetime | None = None
 
     def __post_init__(self) -> None:
         if self.identity.item_type is not InventoryItemType.FILE:
@@ -234,6 +235,8 @@ class FileInventoryRecord:
             "exclusion_reason",
         )
         error_detail = _normalize_optional_text(self.error_detail, "error_detail")
+        if self.captured_at_utc is not None:
+            require_utc(self.captured_at_utc, field_name="captured_at_utc")
 
         if self.capture_status is InventoryCaptureStatus.CAPTURED and sha256 is None:
             raise ValueError("captured file inventory records require sha256")
@@ -249,9 +252,17 @@ class FileInventoryRecord:
         ):
             raise ValueError("error and inaccessible file records require error_detail")
         if self.capture_status is InventoryCaptureStatus.PENDING and (
-            sha256 is not None or exclusion_reason is not None or error_detail is not None
+            sha256 is not None
+            or exclusion_reason is not None
+            or error_detail is not None
+            or self.captured_at_utc is not None
         ):
             raise ValueError("pending file records cannot contain terminal capture evidence")
+        if (
+            self.capture_status is not InventoryCaptureStatus.CAPTURED
+            and self.captured_at_utc is not None
+        ):
+            raise ValueError("only captured file records may contain captured_at_utc")
 
         object.__setattr__(self, "sha256", sha256)
         object.__setattr__(self, "exclusion_reason", exclusion_reason)

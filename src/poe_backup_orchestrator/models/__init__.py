@@ -162,6 +162,13 @@ from poe_backup_orchestrator.models.storage_baseline_manifest import (
     InventoryTotals,
     PreservationBaselineManifest,
 )
+from poe_backup_orchestrator.models.storage_content_capture import (
+    STORAGE_CONTENT_CAPTURE_SCHEMA_VERSION,
+    ContentCaptureException,
+    ContentCaptureExceptionCode,
+    FileContentCertification,
+    InventoryContentCaptureResult,
+)
 from poe_backup_orchestrator.models.storage_discovery import (
     STORAGE_DISCOVERY_SCHEMA_VERSION,
     DiscoveredFilesystemEntry,
@@ -187,6 +194,14 @@ from poe_backup_orchestrator.models.storage_inventory import (
     SourceDeviceType,
     SourceRoot,
     SourceVolume,
+)
+from poe_backup_orchestrator.models.storage_inventory_assembly import (
+    AssembledInventoryItem,
+    InventoryAssemblyContext,
+    InventoryAssemblyResult,
+    InventoryRecord,
+    UnsupportedInventoryItem,
+    stable_inventory_item_id,
 )
 
 __all__ = [
@@ -281,6 +296,12 @@ __all__ = [
     "SourceDeviceType",
     "SourceRoot",
     "SourceVolume",
+    "AssembledInventoryItem",
+    "InventoryAssemblyContext",
+    "InventoryAssemblyResult",
+    "InventoryRecord",
+    "UnsupportedInventoryItem",
+    "stable_inventory_item_id",
     "STORAGE_BASELINE_MANIFEST_SCHEMA_VERSION",
     "BaselineManifestStatus",
     "CaptureExceptionSummary",
@@ -289,6 +310,11 @@ __all__ = [
     "CaptureSessionStatus",
     "InventoryTotals",
     "PreservationBaselineManifest",
+    "STORAGE_CONTENT_CAPTURE_SCHEMA_VERSION",
+    "ContentCaptureException",
+    "ContentCaptureExceptionCode",
+    "FileContentCertification",
+    "InventoryContentCaptureResult",
     "STORAGE_DISCOVERY_SCHEMA_VERSION",
     "DiscoveredFilesystemEntry",
     "DiscoveryEntryType",
