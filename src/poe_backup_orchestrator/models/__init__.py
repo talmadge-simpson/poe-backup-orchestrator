@@ -152,6 +152,16 @@ from poe_backup_orchestrator.models.runtime import (
     RuntimeValidationResult,
 )
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
+from poe_backup_orchestrator.models.storage_baseline_manifest import (
+    STORAGE_BASELINE_MANIFEST_SCHEMA_VERSION,
+    BaselineManifestStatus,
+    CaptureExceptionSummary,
+    CaptureScope,
+    CaptureSession,
+    CaptureSessionStatus,
+    InventoryTotals,
+    PreservationBaselineManifest,
+)
 from poe_backup_orchestrator.models.storage_inventory import (
     STORAGE_INVENTORY_SCHEMA_VERSION,
     DirectoryInventoryRecord,
@@ -260,6 +270,14 @@ __all__ = [
     "SourceDeviceType",
     "SourceRoot",
     "SourceVolume",
+    "STORAGE_BASELINE_MANIFEST_SCHEMA_VERSION",
+    "BaselineManifestStatus",
+    "CaptureExceptionSummary",
+    "CaptureScope",
+    "CaptureSession",
+    "CaptureSessionStatus",
+    "InventoryTotals",
+    "PreservationBaselineManifest",
 ]
 
 __all__ += [
