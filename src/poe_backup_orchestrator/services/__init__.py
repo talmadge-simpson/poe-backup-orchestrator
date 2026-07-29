@@ -94,6 +94,16 @@ from poe_backup_orchestrator.services.storage_inventory_assembly import (
     UnsupportedInventoryItem,
     stable_inventory_item_id,
 )
+from poe_backup_orchestrator.services.storage_inventory_persistence import (
+    INVENTORY_EVIDENCE_LOCK_FILENAME,
+    STORAGE_INVENTORY_EVIDENCE_SCHEMA_VERSION,
+    InventoryEvidenceConflictError,
+    InventoryEvidenceLockError,
+    InventoryEvidencePersistenceError,
+    InventoryEvidencePublication,
+    InventoryEvidenceSerializer,
+    InventoryEvidenceStore,
+)
 
 __all__ = [
     "build_runtime_recovery_inspector",
@@ -141,6 +151,14 @@ __all__ = [
     "publish_operational_report",
     "render_operational_summary",
     "validate_repository",
+    "INVENTORY_EVIDENCE_LOCK_FILENAME",
+    "STORAGE_INVENTORY_EVIDENCE_SCHEMA_VERSION",
+    "InventoryEvidenceConflictError",
+    "InventoryEvidenceLockError",
+    "InventoryEvidencePersistenceError",
+    "InventoryEvidencePublication",
+    "InventoryEvidenceSerializer",
+    "InventoryEvidenceStore",
     "FilesystemDiscoveryAdapter",
     "LocalFilesystemDiscoveryAdapter",
     "AssembledInventoryItem",
