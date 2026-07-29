@@ -87,6 +87,37 @@ class RestoreExecutionRecordPublisher:
                 ) from exc
 
             _fsync_directory(self.executions_root)
+            # Publish the execution-record SHA-256 sidecar as governed evidence.
+            # The sidecar is written atomically and synchronized before publication returns.
+            sidecar = destination.with_name(f"{destination.name}.sha256")
+            sidecar_payload = f"{digest}  {destination.name}\n".encode()
+            sidecar_temp_path: Path | None = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    mode="wb",
+                    dir=sidecar.parent,
+                    prefix=f".{sidecar.name}-",
+                    delete=False,
+                ) as sidecar_handle:
+                    sidecar_temp_path = Path(sidecar_handle.name)
+                    sidecar_handle.write(sidecar_payload)
+                    sidecar_handle.flush()
+                    os.fsync(sidecar_handle.fileno())
+
+                os.replace(sidecar_temp_path, sidecar)
+                sidecar_temp_path = None
+
+                directory_flags = os.O_RDONLY
+                if hasattr(os, "O_DIRECTORY"):
+                    directory_flags |= os.O_DIRECTORY
+                directory_fd = os.open(sidecar.parent, directory_flags)
+                try:
+                    os.fsync(directory_fd)
+                finally:
+                    os.close(directory_fd)
+            finally:
+                if sidecar_temp_path is not None:
+                    sidecar_temp_path.unlink(missing_ok=True)
             return RestoreExecutionRecordPublication(
                 plan_id=record.plan_id,
                 json_path=destination,
