@@ -86,6 +86,16 @@ from poe_backup_orchestrator.services.storage_content_capture import (
     InventoryContentCaptureError,
     InventoryContentCaptureService,
 )
+from poe_backup_orchestrator.services.storage_content_integrity import (
+    ContentIntegrityVerificationError,
+    ContentIntegrityVerificationPolicy,
+    ContentIntegrityVerifier,
+)
+from poe_backup_orchestrator.services.storage_content_integrity_persistence import (
+    ContentIntegrityEvidencePersistence,
+    ContentIntegrityPersistenceError,
+    PersistedContentIntegrityEvidence,
+)
 from poe_backup_orchestrator.services.storage_discovery import (
     FilesystemDiscoveryAdapter,
     LocalFilesystemDiscoveryAdapter,
@@ -176,6 +186,12 @@ __all__ = [
     "InventoryAssemblyResult",
     "UnsupportedInventoryItem",
     "stable_inventory_item_id",
+    "ContentIntegrityVerificationError",
+    "ContentIntegrityVerificationPolicy",
+    "ContentIntegrityVerifier",
+    "ContentIntegrityEvidencePersistence",
+    "ContentIntegrityPersistenceError",
+    "PersistedContentIntegrityEvidence",
 ]
 
 __all__ += [
