@@ -81,6 +81,11 @@ from poe_backup_orchestrator.services.runtime_validation import (
     validate_runtime,
 )
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
+from poe_backup_orchestrator.services.storage_content_capture import (
+    ContentCapturePolicy,
+    InventoryContentCaptureError,
+    InventoryContentCaptureService,
+)
 from poe_backup_orchestrator.services.storage_discovery import (
     FilesystemDiscoveryAdapter,
     LocalFilesystemDiscoveryAdapter,
@@ -159,6 +164,9 @@ __all__ = [
     "InventoryEvidencePublication",
     "InventoryEvidenceSerializer",
     "InventoryEvidenceStore",
+    "ContentCapturePolicy",
+    "InventoryContentCaptureError",
+    "InventoryContentCaptureService",
     "FilesystemDiscoveryAdapter",
     "LocalFilesystemDiscoveryAdapter",
     "AssembledInventoryItem",
