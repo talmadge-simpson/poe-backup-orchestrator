@@ -152,6 +152,21 @@ from poe_backup_orchestrator.models.runtime import (
     RuntimeValidationResult,
 )
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
+from poe_backup_orchestrator.models.storage_inventory import (
+    STORAGE_INVENTORY_SCHEMA_VERSION,
+    DirectoryInventoryRecord,
+    FileInventoryRecord,
+    InventoryCaptureStatus,
+    InventoryItemIdentity,
+    InventoryItemType,
+    InventoryMetadata,
+    PreservationBaselineIdentity,
+    SourceAccessibility,
+    SourceDevice,
+    SourceDeviceType,
+    SourceRoot,
+    SourceVolume,
+)
 
 __all__ = [
     "RESTORE_EXECUTION_RECORD_SCHEMA_VERSION",
@@ -232,6 +247,19 @@ __all__ = [
     "RestorePostPromotionVerification",
     "RestorePostPromotionVerificationReasonCode",
     "RestorePostPromotionVerificationStatus",
+    "STORAGE_INVENTORY_SCHEMA_VERSION",
+    "DirectoryInventoryRecord",
+    "FileInventoryRecord",
+    "InventoryCaptureStatus",
+    "InventoryItemIdentity",
+    "InventoryItemType",
+    "InventoryMetadata",
+    "PreservationBaselineIdentity",
+    "SourceAccessibility",
+    "SourceDevice",
+    "SourceDeviceType",
+    "SourceRoot",
+    "SourceVolume",
 ]
 
 __all__ += [
