@@ -169,6 +169,15 @@ from poe_backup_orchestrator.models.storage_content_capture import (
     FileContentCertification,
     InventoryContentCaptureResult,
 )
+from poe_backup_orchestrator.models.storage_content_integrity import (
+    STORAGE_CONTENT_INTEGRITY_SCHEMA_VERSION,
+    ContentIntegrityFailureCode,
+    ContentIntegrityOutcome,
+    ContentIntegrityTotals,
+    ContentIntegrityVerificationResult,
+    FileIntegrityEvidence,
+    SourceFileObservation,
+)
 from poe_backup_orchestrator.models.storage_discovery import (
     STORAGE_DISCOVERY_SCHEMA_VERSION,
     DiscoveredFilesystemEntry,
@@ -324,6 +333,13 @@ __all__ = [
     "DiscoveryStatus",
     "FilesystemDiscoveryRequest",
     "FilesystemDiscoveryResult",
+    "STORAGE_CONTENT_INTEGRITY_SCHEMA_VERSION",
+    "ContentIntegrityFailureCode",
+    "ContentIntegrityOutcome",
+    "ContentIntegrityTotals",
+    "ContentIntegrityVerificationResult",
+    "FileIntegrityEvidence",
+    "SourceFileObservation",
 ]
 
 __all__ += [
