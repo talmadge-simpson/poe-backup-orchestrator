@@ -12,7 +12,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Final
 
-from poe_backup_orchestrator.services.storage_inventory_assembly import (
+from poe_backup_orchestrator.models.storage_inventory_assembly import (
     AssembledInventoryItem,
     InventoryAssemblyResult,
     UnsupportedInventoryItem,
