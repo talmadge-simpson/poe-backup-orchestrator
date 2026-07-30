@@ -152,6 +152,18 @@ from poe_backup_orchestrator.models.runtime import (
     RuntimeValidationResult,
 )
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
+from poe_backup_orchestrator.models.storage_baseline_acceptance import (
+    STORAGE_BASELINE_ACCEPTANCE_SCHEMA_VERSION,
+    AcceptanceCondition,
+    AcceptanceConditionDisposition,
+    AcceptanceDecision,
+    AcceptanceEvaluationIdentity,
+    AcceptanceMode,
+    AcceptancePolicy,
+    AcceptancePolicyRule,
+    PreservationBaselineAcceptanceRecommendation,
+    stable_preservation_baseline_acceptance_evaluation_id,
+)
 from poe_backup_orchestrator.models.storage_baseline_candidate import (
     STORAGE_BASELINE_CANDIDATE_SCHEMA_VERSION,
     EvidenceRequirementObservation,
@@ -406,6 +418,19 @@ __all__ += [
     "RestorePlanRequest",
     "RestorePlanValidation",
     "RestoreWarning",
+]
+
+__all__ += [
+    "STORAGE_BASELINE_ACCEPTANCE_SCHEMA_VERSION",
+    "AcceptanceCondition",
+    "AcceptanceConditionDisposition",
+    "AcceptanceDecision",
+    "AcceptanceEvaluationIdentity",
+    "AcceptanceMode",
+    "AcceptancePolicy",
+    "AcceptancePolicyRule",
+    "PreservationBaselineAcceptanceRecommendation",
+    "stable_preservation_baseline_acceptance_evaluation_id",
 ]
 
 __all__ += [
