@@ -102,6 +102,7 @@ from poe_backup_orchestrator.services.storage_baseline_validation import (
     InventoryValidationFacts,
     LoadedPreservationEvidence,
     PreservationBaselineValidationError,
+    PreservationBaselineValidationResultAssembler,
     PreservationEvidenceAdapter,
     PreservationEvidenceDeserializationService,
     PreservationEvidenceFactExtractionService,
@@ -246,6 +247,7 @@ __all__ = [
     "ContentIntegrityEvidencePersistence",
     "ContentIntegrityPersistenceError",
     "PersistedContentIntegrityEvidence",
+    "PreservationBaselineValidationResultAssembler",
 ]
 
 __all__ += [

@@ -7,18 +7,26 @@ import json
 import re
 import stat
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 from typing import Final, Protocol
 
 from poe_backup_orchestrator.models.storage_baseline_candidate import (
+    PreservationBaselineCandidate,
     PreservationEvidenceReference,
     PreservationEvidenceType,
 )
 from poe_backup_orchestrator.models.storage_baseline_validation import (
+    STORAGE_BASELINE_VALIDATION_SCHEMA_VERSION,
+    PreservationBaselineValidationIdentity,
+    PreservationBaselineValidationResult,
+    PreservationEvidenceValidationPolicy,
+    ValidatedEvidenceReference,
     ValidationFinding,
     ValidationFindingCategory,
     ValidationFindingSeverity,
+    stable_preservation_baseline_validation_id,
 )
 
 
@@ -1393,3 +1401,90 @@ class ValidationAdapterRegistry:
                 f"{evidence_type.value}/{normalized_schema}/{normalized_version}"
             )
         return matches[0]
+
+
+@dataclass(frozen=True, slots=True)
+class PreservationBaselineValidationResultAssembler:
+    """Assemble one immutable, deterministic technical validation result."""
+
+    def assemble(
+        self,
+        *,
+        candidate: PreservationBaselineCandidate,
+        validation_policy: PreservationEvidenceValidationPolicy,
+        validated_evidence: tuple[ValidatedEvidenceReference, ...],
+        findings: tuple[ValidationFinding, ...],
+        validated_at_utc: datetime,
+    ) -> PreservationBaselineValidationResult:
+        if not isinstance(candidate, PreservationBaselineCandidate):
+            raise PreservationBaselineValidationError(
+                "candidate must be a PreservationBaselineCandidate"
+            )
+        if not isinstance(
+            validation_policy,
+            PreservationEvidenceValidationPolicy,
+        ):
+            raise PreservationBaselineValidationError(
+                "validation_policy must be a PreservationEvidenceValidationPolicy"
+            )
+        if not isinstance(validated_evidence, tuple):
+            raise PreservationBaselineValidationError(
+                "validated_evidence must be an immutable tuple"
+            )
+        if not isinstance(findings, tuple):
+            raise PreservationBaselineValidationError("findings must be an immutable tuple")
+
+        canonical_evidence = tuple(sorted(validated_evidence, key=_validated_evidence_assembly_key))
+        evidence_keys = tuple(_validated_evidence_assembly_key(item) for item in canonical_evidence)
+        if len(evidence_keys) != len(set(evidence_keys)):
+            raise PreservationBaselineValidationError(
+                "validated_evidence contains duplicate references"
+            )
+
+        canonical_findings = tuple(sorted(findings, key=lambda item: item.sequence))
+        expected_sequences = tuple(range(1, len(canonical_findings) + 1))
+        observed_sequences = tuple(item.sequence for item in canonical_findings)
+        if observed_sequences != expected_sequences:
+            raise PreservationBaselineValidationError(
+                "finding sequences must be contiguous beginning with one"
+            )
+
+        validation_id = stable_preservation_baseline_validation_id(
+            candidate_id=candidate.identity.candidate_id,
+            policy_profile_id=validation_policy.profile_id,
+            validated_evidence=canonical_evidence,
+            findings=canonical_findings,
+        )
+        identity = PreservationBaselineValidationIdentity(
+            schema_version=STORAGE_BASELINE_VALIDATION_SCHEMA_VERSION,
+            validation_id=validation_id,
+            candidate_id=candidate.identity.candidate_id,
+            baseline_id=candidate.identity.baseline_id,
+            validated_at_utc=validated_at_utc,
+        )
+
+        try:
+            return PreservationBaselineValidationResult(
+                identity=identity,
+                candidate=candidate,
+                policy_profile_id=validation_policy.profile_id,
+                validated_evidence=canonical_evidence,
+                findings=canonical_findings,
+            )
+        except ValueError as exc:
+            raise PreservationBaselineValidationError(
+                f"validation result assembly failed: {exc}"
+            ) from exc
+
+
+def _validated_evidence_assembly_key(
+    item: ValidatedEvidenceReference,
+) -> tuple[str, str, str]:
+    if not isinstance(item, ValidatedEvidenceReference):
+        raise PreservationBaselineValidationError("validated_evidence contains an invalid item")
+    reference = item.evidence_reference
+    return (
+        reference.source_root_id,
+        reference.evidence_type.value,
+        str(reference.evidence_path),
+    )
