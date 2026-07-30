@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 import stat
 from dataclasses import dataclass
@@ -294,6 +295,314 @@ class PreservationEvidenceAdapter(Protocol):
 
     def extract_validation_facts(self, parsed_evidence: object) -> object:
         """Extract only facts required for technical validation."""
+
+
+INVENTORY_EVIDENCE_SCHEMA_NAME: Final[str] = "poe.storage.inventory-evidence"
+CONTENT_INTEGRITY_EVIDENCE_SCHEMA_NAME: Final[str] = "poe.storage.content-integrity-evidence"
+
+FrozenJsonScalar = str | int | float | bool | None
+FrozenJsonValue = (
+    FrozenJsonScalar | tuple["FrozenJsonValue", ...] | tuple[tuple[str, "FrozenJsonValue"], ...]
+)
+
+
+class EvidenceDeserializationStatus(StrEnum):
+    DESERIALIZED = "deserialized"
+    AUTHENTICATION_REQUIRED = "authentication_required"
+    INVALID_UTF8 = "invalid_utf8"
+    MALFORMED_SERIALIZATION = "malformed_serialization"
+    INVALID_DOCUMENT_SHAPE = "invalid_document_shape"
+    SCHEMA_IDENTITY_MISSING = "schema_identity_missing"
+    SCHEMA_IDENTITY_MISMATCH = "schema_identity_mismatch"
+    ADAPTER_NOT_FOUND = "adapter_not_found"
+    ADAPTER_PARSE_FAILED = "adapter_parse_failed"
+
+
+@dataclass(frozen=True, slots=True)
+class DeserializedPreservationEvidence:
+    loaded_evidence: LoadedPreservationEvidence
+    status: EvidenceDeserializationStatus
+    schema_name: str | None
+    schema_version: str | None
+    parsed_evidence: object | None
+    adapter: PreservationEvidenceAdapter | None
+    detail_code: str | None = None
+
+    def __post_init__(self) -> None:
+        schema_name = None if self.schema_name is None else self.schema_name.strip()
+        schema_version = None if self.schema_version is None else self.schema_version.strip()
+        detail_code = None if self.detail_code is None else self.detail_code.strip()
+
+        if schema_name == "":
+            schema_name = None
+        if schema_version == "":
+            schema_version = None
+        if detail_code == "":
+            detail_code = None
+
+        if self.status is EvidenceDeserializationStatus.DESERIALIZED:
+            if self.loaded_evidence.status is not EvidenceLoadStatus.VERIFIED:
+                raise ValueError("deserialized evidence requires authenticated input")
+            if schema_name is None or schema_version is None:
+                raise ValueError("deserialized evidence requires schema identity")
+            if self.parsed_evidence is None:
+                raise ValueError("deserialized evidence requires parsed_evidence")
+            if self.adapter is None:
+                raise ValueError("deserialized evidence requires resolved adapter")
+            if detail_code is not None:
+                raise ValueError("deserialized evidence must not include detail_code")
+        else:
+            if self.parsed_evidence is not None:
+                raise ValueError("failed deserialization must not expose parsed evidence")
+            if self.adapter is not None:
+                raise ValueError("failed deserialization must not expose an adapter")
+            if detail_code is None:
+                raise ValueError("failed deserialization requires detail_code")
+
+        object.__setattr__(self, "schema_name", schema_name)
+        object.__setattr__(self, "schema_version", schema_version)
+        object.__setattr__(self, "detail_code", detail_code)
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryEvidenceAdapter:
+    evidence_type: Final[PreservationEvidenceType] = PreservationEvidenceType.INVENTORY_EVIDENCE
+    schema_name: Final[str] = INVENTORY_EVIDENCE_SCHEMA_NAME
+    supported_versions: Final[tuple[str, ...]] = ("1.0",)
+
+    def parse(self, evidence_bytes: bytes) -> object:
+        records, _, _ = _decode_inventory_evidence(evidence_bytes)
+        return tuple(_freeze_json(record) for record in records)
+
+    def extract_validation_facts(self, parsed_evidence: object) -> object:
+        return parsed_evidence
+
+
+@dataclass(frozen=True, slots=True)
+class ContentIntegrityEvidenceAdapter:
+    evidence_type: Final[PreservationEvidenceType] = (
+        PreservationEvidenceType.CONTENT_INTEGRITY_EVIDENCE
+    )
+    schema_name: Final[str] = CONTENT_INTEGRITY_EVIDENCE_SCHEMA_NAME
+    supported_versions: Final[tuple[str, ...]] = ("1.0",)
+
+    def parse(self, evidence_bytes: bytes) -> object:
+        document, _, _ = _decode_content_integrity_evidence(evidence_bytes)
+        return _freeze_json(document)
+
+    def extract_validation_facts(self, parsed_evidence: object) -> object:
+        return parsed_evidence
+
+
+@dataclass(frozen=True, slots=True)
+class PreservationEvidenceDeserializationService:
+    registry: ValidationAdapterRegistry
+
+    def deserialize(
+        self,
+        loaded_evidence: LoadedPreservationEvidence,
+    ) -> DeserializedPreservationEvidence:
+        if (
+            loaded_evidence.status is not EvidenceLoadStatus.VERIFIED
+            or loaded_evidence.evidence_bytes is None
+        ):
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=EvidenceDeserializationStatus.AUTHENTICATION_REQUIRED,
+                detail_code="evidence_not_authenticated",
+            )
+
+        try:
+            schema_name, schema_version = _probe_schema_identity(
+                evidence_type=loaded_evidence.reference.evidence_type,
+                evidence_bytes=loaded_evidence.evidence_bytes,
+            )
+        except UnicodeDecodeError:
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=EvidenceDeserializationStatus.INVALID_UTF8,
+                detail_code="evidence_not_utf8",
+            )
+        except json.JSONDecodeError:
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=EvidenceDeserializationStatus.MALFORMED_SERIALIZATION,
+                detail_code="evidence_serialization_malformed",
+            )
+        except _InvalidEvidenceShapeError as error:
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=error.status,
+                detail_code=error.detail_code,
+                schema_name=error.schema_name,
+                schema_version=error.schema_version,
+            )
+
+        if schema_version != loaded_evidence.reference.schema_version:
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=EvidenceDeserializationStatus.SCHEMA_IDENTITY_MISMATCH,
+                detail_code="payload_reference_schema_version_mismatch",
+                schema_name=schema_name,
+                schema_version=schema_version,
+            )
+
+        try:
+            adapter = self.registry.resolve(
+                evidence_type=loaded_evidence.reference.evidence_type,
+                schema_name=schema_name,
+                schema_version=schema_version,
+            )
+        except PreservationBaselineValidationError:
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=EvidenceDeserializationStatus.ADAPTER_NOT_FOUND,
+                detail_code="schema_adapter_not_found",
+                schema_name=schema_name,
+                schema_version=schema_version,
+            )
+
+        try:
+            parsed_evidence = adapter.parse(loaded_evidence.evidence_bytes)
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError, TypeError):
+            return _deserialization_failure(
+                loaded_evidence=loaded_evidence,
+                status=EvidenceDeserializationStatus.ADAPTER_PARSE_FAILED,
+                detail_code="resolved_adapter_parse_failed",
+                schema_name=schema_name,
+                schema_version=schema_version,
+            )
+
+        return DeserializedPreservationEvidence(
+            loaded_evidence=loaded_evidence,
+            status=EvidenceDeserializationStatus.DESERIALIZED,
+            schema_name=schema_name,
+            schema_version=schema_version,
+            parsed_evidence=parsed_evidence,
+            adapter=adapter,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class _InvalidEvidenceShapeError(Exception):
+    status: EvidenceDeserializationStatus
+    detail_code: str
+    schema_name: str | None = None
+    schema_version: str | None = None
+
+
+def _probe_schema_identity(
+    *,
+    evidence_type: PreservationEvidenceType,
+    evidence_bytes: bytes,
+) -> tuple[str, str]:
+    if evidence_type is PreservationEvidenceType.INVENTORY_EVIDENCE:
+        _, schema_name, schema_version = _decode_inventory_evidence(evidence_bytes)
+        return schema_name, schema_version
+    if evidence_type is PreservationEvidenceType.CONTENT_INTEGRITY_EVIDENCE:
+        _, schema_name, schema_version = _decode_content_integrity_evidence(evidence_bytes)
+        return schema_name, schema_version
+    raise _InvalidEvidenceShapeError(
+        status=EvidenceDeserializationStatus.INVALID_DOCUMENT_SHAPE,
+        detail_code="unsupported_evidence_type",
+    )
+
+
+def _decode_inventory_evidence(
+    evidence_bytes: bytes,
+) -> tuple[list[dict[str, object]], str, str]:
+    decoded_text = evidence_bytes.decode("utf-8", errors="strict")
+    lines = decoded_text.splitlines()
+    if not lines:
+        raise _InvalidEvidenceShapeError(
+            status=EvidenceDeserializationStatus.INVALID_DOCUMENT_SHAPE,
+            detail_code="inventory_document_empty",
+            schema_name=INVENTORY_EVIDENCE_SCHEMA_NAME,
+        )
+
+    records: list[dict[str, object]] = []
+    for line in lines:
+        decoded = json.loads(line)
+        if not isinstance(decoded, dict):
+            raise _InvalidEvidenceShapeError(
+                status=EvidenceDeserializationStatus.INVALID_DOCUMENT_SHAPE,
+                detail_code="inventory_record_not_object",
+                schema_name=INVENTORY_EVIDENCE_SCHEMA_NAME,
+            )
+        records.append(decoded)
+
+    header = records[0]
+    if header.get("record_kind") != "inventory_header":
+        raise _InvalidEvidenceShapeError(
+            status=EvidenceDeserializationStatus.INVALID_DOCUMENT_SHAPE,
+            detail_code="inventory_header_missing",
+            schema_name=INVENTORY_EVIDENCE_SCHEMA_NAME,
+        )
+
+    schema_version = header.get("schema_version")
+    if not isinstance(schema_version, str) or not schema_version.strip():
+        raise _InvalidEvidenceShapeError(
+            status=EvidenceDeserializationStatus.SCHEMA_IDENTITY_MISSING,
+            detail_code="inventory_schema_version_missing",
+            schema_name=INVENTORY_EVIDENCE_SCHEMA_NAME,
+        )
+
+    return records, INVENTORY_EVIDENCE_SCHEMA_NAME, schema_version.strip()
+
+
+def _decode_content_integrity_evidence(
+    evidence_bytes: bytes,
+) -> tuple[dict[str, object], str, str]:
+    decoded_text = evidence_bytes.decode("utf-8", errors="strict")
+    decoded = json.loads(decoded_text)
+    if not isinstance(decoded, dict):
+        raise _InvalidEvidenceShapeError(
+            status=EvidenceDeserializationStatus.INVALID_DOCUMENT_SHAPE,
+            detail_code="content_integrity_document_not_object",
+            schema_name=CONTENT_INTEGRITY_EVIDENCE_SCHEMA_NAME,
+        )
+
+    schema_version = decoded.get("schema_version")
+    if not isinstance(schema_version, str) or not schema_version.strip():
+        raise _InvalidEvidenceShapeError(
+            status=EvidenceDeserializationStatus.SCHEMA_IDENTITY_MISSING,
+            detail_code="content_integrity_schema_version_missing",
+            schema_name=CONTENT_INTEGRITY_EVIDENCE_SCHEMA_NAME,
+        )
+
+    return decoded, CONTENT_INTEGRITY_EVIDENCE_SCHEMA_NAME, schema_version.strip()
+
+
+def _freeze_json(value: object) -> FrozenJsonValue:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, list):
+        return tuple(_freeze_json(item) for item in value)
+    if isinstance(value, dict):
+        return tuple(
+            (str(key), _freeze_json(item))
+            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+        )
+    raise TypeError(f"unsupported JSON value type: {type(value).__name__}")
+
+
+def _deserialization_failure(
+    *,
+    loaded_evidence: LoadedPreservationEvidence,
+    status: EvidenceDeserializationStatus,
+    detail_code: str,
+    schema_name: str | None = None,
+    schema_version: str | None = None,
+) -> DeserializedPreservationEvidence:
+    return DeserializedPreservationEvidence(
+        loaded_evidence=loaded_evidence,
+        status=status,
+        schema_name=schema_name,
+        schema_version=schema_version,
+        parsed_evidence=None,
+        adapter=None,
+        detail_code=detail_code,
+    )
 
 
 @dataclass(frozen=True, slots=True)
