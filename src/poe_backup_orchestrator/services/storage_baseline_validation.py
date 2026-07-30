@@ -480,6 +480,230 @@ class PreservationEvidenceFactExtractionService:
         )
 
 
+class EvidenceReconciliationStatus(StrEnum):
+    RECONCILED = "reconciled"
+    SOURCE_ROOT_MISMATCH = "source_root_mismatch"
+    RECONCILIATION_FAILED = "reconciliation_failed"
+
+
+@dataclass(frozen=True, slots=True, order=True)
+class ReconciledEvidenceItem:
+    relative_path: str
+    inventory_item_id: str | None
+    integrity_item_id: str | None
+
+    def __post_init__(self) -> None:
+        relative_path = self.relative_path.strip()
+        if not relative_path:
+            raise ValueError("relative_path must not be empty")
+        object.__setattr__(self, "relative_path", relative_path)
+        object.__setattr__(
+            self,
+            "inventory_item_id",
+            _normalize_optional_text(self.inventory_item_id),
+        )
+        object.__setattr__(
+            self,
+            "integrity_item_id",
+            _normalize_optional_text(self.integrity_item_id),
+        )
+
+
+@dataclass(frozen=True, slots=True, order=True)
+class UnmatchedEvidenceItem:
+    relative_path: str
+    item_id: str | None
+
+    def __post_init__(self) -> None:
+        relative_path = self.relative_path.strip()
+        if not relative_path:
+            raise ValueError("relative_path must not be empty")
+        object.__setattr__(self, "relative_path", relative_path)
+        object.__setattr__(self, "item_id", _normalize_optional_text(self.item_id))
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceCountReconciliation:
+    inventory_declared_item_count: int
+    inventory_observed_record_count: int
+    integrity_observed_record_count: int
+    matched_record_count: int
+    inventory_only_record_count: int
+    integrity_only_record_count: int
+    duplicate_inventory_path_count: int
+    duplicate_integrity_path_count: int
+
+    def __post_init__(self) -> None:
+        values = (
+            self.inventory_declared_item_count,
+            self.inventory_observed_record_count,
+            self.integrity_observed_record_count,
+            self.matched_record_count,
+            self.inventory_only_record_count,
+            self.integrity_only_record_count,
+            self.duplicate_inventory_path_count,
+            self.duplicate_integrity_path_count,
+        )
+        if any(value < 0 for value in values):
+            raise ValueError("reconciliation counts must not be negative")
+
+
+@dataclass(frozen=True, slots=True)
+class PreservationEvidenceReconciliation:
+    inventory_facts: InventoryValidationFacts
+    integrity_facts: ContentIntegrityValidationFacts
+    status: EvidenceReconciliationStatus
+    matched: tuple[ReconciledEvidenceItem, ...]
+    inventory_only: tuple[UnmatchedEvidenceItem, ...]
+    integrity_only: tuple[UnmatchedEvidenceItem, ...]
+    duplicate_inventory_paths: tuple[str, ...]
+    duplicate_integrity_paths: tuple[str, ...]
+    counts: EvidenceCountReconciliation | None
+    detail_code: str | None = None
+
+    def __post_init__(self) -> None:
+        detail_code = _normalize_optional_text(self.detail_code)
+        matched = tuple(self.matched)
+        inventory_only = tuple(self.inventory_only)
+        integrity_only = tuple(self.integrity_only)
+        duplicate_inventory_paths = tuple(self.duplicate_inventory_paths)
+        duplicate_integrity_paths = tuple(self.duplicate_integrity_paths)
+
+        if matched != tuple(sorted(matched)):
+            raise ValueError("matched reconciliation items must be canonically ordered")
+        if inventory_only != tuple(sorted(inventory_only)):
+            raise ValueError("inventory-only items must be canonically ordered")
+        if integrity_only != tuple(sorted(integrity_only)):
+            raise ValueError("integrity-only items must be canonically ordered")
+        if duplicate_inventory_paths != tuple(sorted(set(duplicate_inventory_paths))):
+            raise ValueError("duplicate inventory paths must be unique and ordered")
+        if duplicate_integrity_paths != tuple(sorted(set(duplicate_integrity_paths))):
+            raise ValueError("duplicate integrity paths must be unique and ordered")
+
+        if self.status is EvidenceReconciliationStatus.RECONCILED:
+            if self.counts is None:
+                raise ValueError("successful reconciliation requires counts")
+            if detail_code is not None:
+                raise ValueError("successful reconciliation must not include detail_code")
+        else:
+            if self.counts is not None:
+                raise ValueError("failed reconciliation must not expose counts")
+            if matched or inventory_only or integrity_only:
+                raise ValueError("failed reconciliation must not expose relationships")
+            if duplicate_inventory_paths or duplicate_integrity_paths:
+                raise ValueError("failed reconciliation must not expose duplicate paths")
+            if detail_code is None:
+                raise ValueError("failed reconciliation requires detail_code")
+
+        object.__setattr__(self, "matched", matched)
+        object.__setattr__(self, "inventory_only", inventory_only)
+        object.__setattr__(self, "integrity_only", integrity_only)
+        object.__setattr__(self, "duplicate_inventory_paths", duplicate_inventory_paths)
+        object.__setattr__(self, "duplicate_integrity_paths", duplicate_integrity_paths)
+        object.__setattr__(self, "detail_code", detail_code)
+
+
+@dataclass(frozen=True, slots=True)
+class PreservationEvidenceReconciliationService:
+    def reconcile(
+        self,
+        *,
+        inventory_facts: InventoryValidationFacts,
+        integrity_facts: ContentIntegrityValidationFacts,
+    ) -> PreservationEvidenceReconciliation:
+        if inventory_facts.source_root_id != integrity_facts.source_root_id:
+            return _reconciliation_failure(
+                inventory_facts=inventory_facts,
+                integrity_facts=integrity_facts,
+                status=EvidenceReconciliationStatus.SOURCE_ROOT_MISMATCH,
+                detail_code="source_root_ids_do_not_match",
+            )
+
+        try:
+            inventory_records = tuple(
+                _reconciliation_record(record, "inventory record")
+                for record in inventory_facts.records
+            )
+            integrity_records = tuple(
+                _reconciliation_record(record, "integrity record")
+                for record in integrity_facts.evidence
+            )
+        except (KeyError, TypeError, ValueError):
+            return _reconciliation_failure(
+                inventory_facts=inventory_facts,
+                integrity_facts=integrity_facts,
+                status=EvidenceReconciliationStatus.RECONCILIATION_FAILED,
+                detail_code="reconciliation_record_shape_invalid",
+            )
+
+        inventory_by_path = _group_reconciliation_records(inventory_records)
+        integrity_by_path = _group_reconciliation_records(integrity_records)
+
+        duplicate_inventory_paths = tuple(
+            sorted(path for path, records in inventory_by_path.items() if len(records) > 1)
+        )
+        duplicate_integrity_paths = tuple(
+            sorted(path for path, records in integrity_by_path.items() if len(records) > 1)
+        )
+
+        unique_inventory = {
+            path: records[0] for path, records in inventory_by_path.items() if len(records) == 1
+        }
+        unique_integrity = {
+            path: records[0] for path, records in integrity_by_path.items() if len(records) == 1
+        }
+
+        matched_paths = sorted(set(unique_inventory) & set(unique_integrity))
+        inventory_only_paths = sorted(set(unique_inventory) - set(unique_integrity))
+        integrity_only_paths = sorted(set(unique_integrity) - set(unique_inventory))
+
+        matched = tuple(
+            ReconciledEvidenceItem(
+                relative_path=path,
+                inventory_item_id=unique_inventory[path][1],
+                integrity_item_id=unique_integrity[path][1],
+            )
+            for path in matched_paths
+        )
+        inventory_only = tuple(
+            UnmatchedEvidenceItem(
+                relative_path=path,
+                item_id=unique_inventory[path][1],
+            )
+            for path in inventory_only_paths
+        )
+        integrity_only = tuple(
+            UnmatchedEvidenceItem(
+                relative_path=path,
+                item_id=unique_integrity[path][1],
+            )
+            for path in integrity_only_paths
+        )
+
+        counts = EvidenceCountReconciliation(
+            inventory_declared_item_count=inventory_facts.declared_item_count,
+            inventory_observed_record_count=len(inventory_records),
+            integrity_observed_record_count=len(integrity_records),
+            matched_record_count=len(matched),
+            inventory_only_record_count=len(inventory_only),
+            integrity_only_record_count=len(integrity_only),
+            duplicate_inventory_path_count=len(duplicate_inventory_paths),
+            duplicate_integrity_path_count=len(duplicate_integrity_paths),
+        )
+
+        return PreservationEvidenceReconciliation(
+            inventory_facts=inventory_facts,
+            integrity_facts=integrity_facts,
+            status=EvidenceReconciliationStatus.RECONCILED,
+            matched=matched,
+            inventory_only=inventory_only,
+            integrity_only=integrity_only,
+            duplicate_inventory_paths=duplicate_inventory_paths,
+            duplicate_integrity_paths=duplicate_integrity_paths,
+            counts=counts,
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class InventoryEvidenceAdapter:
     evidence_type: Final[PreservationEvidenceType] = PreservationEvidenceType.INVENTORY_EVIDENCE
@@ -780,6 +1004,58 @@ def _required_frozen_int(
     if type(value) is not int:
         raise TypeError(f"{description}.{key} must be an integer")
     return value
+
+
+def _normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _reconciliation_record(
+    value: FrozenJsonValue,
+    description: str,
+) -> tuple[str, str | None]:
+    document = _require_frozen_object(value, description)
+    relative_path = _required_frozen_string(document, "relative_path", description)
+    item_id_value = document.get("item_id")
+    if item_id_value is not None and not isinstance(item_id_value, str):
+        raise TypeError(f"{description}.item_id must be a string when present")
+    return relative_path, _normalize_optional_text(item_id_value)
+
+
+def _group_reconciliation_records(
+    records: tuple[tuple[str, str | None], ...],
+) -> dict[str, tuple[tuple[str, str | None], ...]]:
+    grouped: dict[str, list[tuple[str, str | None]]] = {}
+    for record in records:
+        grouped.setdefault(record[0], []).append(record)
+    return {
+        path: tuple(sorted(path_records, key=lambda record: record[1] or ""))
+        for path, path_records in sorted(grouped.items())
+    }
+
+
+def _reconciliation_failure(
+    *,
+    inventory_facts: InventoryValidationFacts,
+    integrity_facts: ContentIntegrityValidationFacts,
+    status: EvidenceReconciliationStatus,
+    detail_code: str,
+) -> PreservationEvidenceReconciliation:
+    return PreservationEvidenceReconciliation(
+        inventory_facts=inventory_facts,
+        integrity_facts=integrity_facts,
+        status=status,
+        matched=(),
+        inventory_only=(),
+        integrity_only=(),
+        duplicate_inventory_paths=(),
+        duplicate_integrity_paths=(),
+        counts=None,
+        detail_code=detail_code,
+    )
 
 
 def _deserialization_failure(
