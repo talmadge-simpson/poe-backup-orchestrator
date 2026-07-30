@@ -933,3 +933,67 @@ while deliberately stopping before any governance authority transition.
 The governing rule is:
 
 > Evaluation may recommend. Only a later accountable authority may decide.
+
+## Implementation Closeout
+
+Slice 6B-3 is implemented and validated.
+
+### Delivered capability
+
+The slice introduces an immutable, deterministic acceptance-evaluation domain for
+preservation-baseline validation results.
+
+The implementation provides:
+
+- explicit acceptance-policy rules;
+- strict and review-permitted evaluation modes;
+- satisfied, review-required, and blocking acceptance conditions;
+- deterministic `pba-` evaluation identities;
+- complete candidate, baseline, validation, and policy lineage;
+- conservative treatment of unmapped validation findings;
+- authority-neutral acceptance, review, and rejection recommendations.
+
+### Architectural boundaries preserved
+
+The evaluator:
+
+- consumes only an immutable `PreservationBaselineValidationResult`;
+- does not reopen evidence artifacts;
+- does not access the filesystem;
+- does not recompute digests;
+- does not perform persistence or publication;
+- does not approve exceptions;
+- does not authorize migration;
+- does not authorize cleanup.
+
+### Implementation evidence
+
+Feature implementation commit:
+
+- `054e17c` — `Implement Slice 6B-3 acceptance evaluation`
+
+Implemented files:
+
+- `src/poe_backup_orchestrator/models/storage_baseline_acceptance.py`
+- `src/poe_backup_orchestrator/services/storage_baseline_acceptance.py`
+- `tests/unit/test_storage_baseline_acceptance_models.py`
+- `tests/unit/test_storage_baseline_acceptance.py`
+
+Public exports were added through the model and service package initializers.
+
+### Validation evidence
+
+The merged baseline passed:
+
+- Ruff formatting validation;
+- Ruff static analysis;
+- focused Slice 6B-3 unit tests;
+- the complete repository test suite.
+
+The certified full-suite baseline is **778 passing tests**.
+
+### Closeout conclusion
+
+Slice 6B-3 is complete. The repository now supports deterministic,
+policy-driven preservation-baseline acceptance recommendations while preserving
+the separation between technical evaluation and human governance authority.
