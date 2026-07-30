@@ -364,6 +364,122 @@ class DeserializedPreservationEvidence:
         object.__setattr__(self, "detail_code", detail_code)
 
 
+class EvidenceFactExtractionStatus(StrEnum):
+    EXTRACTED = "extracted"
+    DESERIALIZATION_REQUIRED = "deserialization_required"
+    EXTRACTION_FAILED = "extraction_failed"
+
+
+@dataclass(frozen=True, slots=True)
+class InventoryValidationFacts:
+    schema_version: str
+    source_root_id: str
+    declared_item_count: int
+    records: tuple[FrozenJsonValue, ...]
+    totals: FrozenJsonValue
+
+    def __post_init__(self) -> None:
+        schema_version = self.schema_version.strip()
+        source_root_id = self.source_root_id.strip()
+        records = tuple(self.records)
+        if not schema_version:
+            raise ValueError("inventory fact schema_version must not be empty")
+        if not source_root_id:
+            raise ValueError("inventory fact source_root_id must not be empty")
+        if self.declared_item_count < 0:
+            raise ValueError("declared_item_count must not be negative")
+        object.__setattr__(self, "schema_version", schema_version)
+        object.__setattr__(self, "source_root_id", source_root_id)
+        object.__setattr__(self, "records", records)
+
+
+@dataclass(frozen=True, slots=True)
+class ContentIntegrityValidationFacts:
+    schema_version: str
+    source_root_id: str
+    evidence: tuple[FrozenJsonValue, ...]
+    totals: FrozenJsonValue
+
+    def __post_init__(self) -> None:
+        schema_version = self.schema_version.strip()
+        source_root_id = self.source_root_id.strip()
+        if not schema_version:
+            raise ValueError("integrity fact schema_version must not be empty")
+        if not source_root_id:
+            raise ValueError("integrity fact source_root_id must not be empty")
+        object.__setattr__(self, "schema_version", schema_version)
+        object.__setattr__(self, "source_root_id", source_root_id)
+        object.__setattr__(self, "evidence", tuple(self.evidence))
+
+
+@dataclass(frozen=True, slots=True)
+class ExtractedPreservationEvidenceFacts:
+    deserialized_evidence: DeserializedPreservationEvidence
+    status: EvidenceFactExtractionStatus
+    facts: InventoryValidationFacts | ContentIntegrityValidationFacts | None
+    detail_code: str | None = None
+
+    def __post_init__(self) -> None:
+        detail_code = None if self.detail_code is None else self.detail_code.strip()
+        if detail_code == "":
+            detail_code = None
+        if self.status is EvidenceFactExtractionStatus.EXTRACTED:
+            if self.deserialized_evidence.status is not EvidenceDeserializationStatus.DESERIALIZED:
+                raise ValueError("extracted facts require deserialized evidence")
+            if self.facts is None:
+                raise ValueError("successful extraction requires facts")
+            if detail_code is not None:
+                raise ValueError("successful extraction must not include detail_code")
+        else:
+            if self.facts is not None:
+                raise ValueError("failed extraction must not expose facts")
+            if detail_code is None:
+                raise ValueError("failed extraction requires detail_code")
+        object.__setattr__(self, "detail_code", detail_code)
+
+
+@dataclass(frozen=True, slots=True)
+class PreservationEvidenceFactExtractionService:
+    def extract(
+        self,
+        deserialized_evidence: DeserializedPreservationEvidence,
+    ) -> ExtractedPreservationEvidenceFacts:
+        if (
+            deserialized_evidence.status is not EvidenceDeserializationStatus.DESERIALIZED
+            or deserialized_evidence.parsed_evidence is None
+            or deserialized_evidence.adapter is None
+        ):
+            return ExtractedPreservationEvidenceFacts(
+                deserialized_evidence=deserialized_evidence,
+                status=EvidenceFactExtractionStatus.DESERIALIZATION_REQUIRED,
+                facts=None,
+                detail_code="evidence_not_deserialized",
+            )
+        try:
+            facts = deserialized_evidence.adapter.extract_validation_facts(
+                deserialized_evidence.parsed_evidence
+            )
+        except (KeyError, TypeError, ValueError):
+            return ExtractedPreservationEvidenceFacts(
+                deserialized_evidence=deserialized_evidence,
+                status=EvidenceFactExtractionStatus.EXTRACTION_FAILED,
+                facts=None,
+                detail_code="adapter_fact_extraction_failed",
+            )
+        if not isinstance(facts, (InventoryValidationFacts, ContentIntegrityValidationFacts)):
+            return ExtractedPreservationEvidenceFacts(
+                deserialized_evidence=deserialized_evidence,
+                status=EvidenceFactExtractionStatus.EXTRACTION_FAILED,
+                facts=None,
+                detail_code="adapter_returned_unsupported_fact_type",
+            )
+        return ExtractedPreservationEvidenceFacts(
+            deserialized_evidence=deserialized_evidence,
+            status=EvidenceFactExtractionStatus.EXTRACTED,
+            facts=facts,
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class InventoryEvidenceAdapter:
     evidence_type: Final[PreservationEvidenceType] = PreservationEvidenceType.INVENTORY_EVIDENCE
@@ -375,7 +491,15 @@ class InventoryEvidenceAdapter:
         return tuple(_freeze_json(record) for record in records)
 
     def extract_validation_facts(self, parsed_evidence: object) -> object:
-        return parsed_evidence
+        records = _require_frozen_sequence(parsed_evidence, "inventory evidence")
+        header = _require_frozen_object(records[0], "inventory header")
+        return InventoryValidationFacts(
+            schema_version=_required_frozen_string(header, "schema_version", "inventory header"),
+            source_root_id=_required_frozen_string(header, "source_root_id", "inventory header"),
+            declared_item_count=_required_frozen_int(header, "item_count", "inventory header"),
+            records=records[1:],
+            totals=_required_frozen_value(header, "totals", "inventory header"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -391,7 +515,21 @@ class ContentIntegrityEvidenceAdapter:
         return _freeze_json(document)
 
     def extract_validation_facts(self, parsed_evidence: object) -> object:
-        return parsed_evidence
+        document = _require_frozen_object(parsed_evidence, "content-integrity evidence")
+        evidence = _require_frozen_sequence(
+            _required_frozen_value(document, "evidence", "content-integrity evidence"),
+            "content-integrity evidence items",
+        )
+        return ContentIntegrityValidationFacts(
+            schema_version=_required_frozen_string(
+                document, "schema_version", "content-integrity evidence"
+            ),
+            source_root_id=_required_frozen_string(
+                document, "source_root_id", "content-integrity evidence"
+            ),
+            evidence=evidence,
+            totals=_required_frozen_value(document, "totals", "content-integrity evidence"),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -584,6 +722,64 @@ def _freeze_json(value: object) -> FrozenJsonValue:
             for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
         )
     raise TypeError(f"unsupported JSON value type: {type(value).__name__}")
+
+
+def _require_frozen_object(
+    value: object,
+    description: str,
+) -> dict[str, FrozenJsonValue]:
+    if not isinstance(value, tuple):
+        raise TypeError(f"{description} must be a frozen object")
+    result: dict[str, FrozenJsonValue] = {}
+    for pair in value:
+        if not isinstance(pair, tuple) or len(pair) != 2 or not isinstance(pair[0], str):
+            raise TypeError(f"{description} must be a frozen object")
+        key, item = pair
+        if key in result:
+            raise ValueError(f"{description} contains duplicate key: {key}")
+        result[key] = item
+    return result
+
+
+def _require_frozen_sequence(
+    value: object,
+    description: str,
+) -> tuple[FrozenJsonValue, ...]:
+    if not isinstance(value, tuple):
+        raise TypeError(f"{description} must be a frozen sequence")
+    return value
+
+
+def _required_frozen_value(
+    document: dict[str, FrozenJsonValue],
+    key: str,
+    description: str,
+) -> FrozenJsonValue:
+    if key not in document:
+        raise KeyError(f"{description} is missing required field: {key}")
+    return document[key]
+
+
+def _required_frozen_string(
+    document: dict[str, FrozenJsonValue],
+    key: str,
+    description: str,
+) -> str:
+    value = _required_frozen_value(document, key, description)
+    if not isinstance(value, str) or not value.strip():
+        raise TypeError(f"{description}.{key} must be a non-empty string")
+    return value.strip()
+
+
+def _required_frozen_int(
+    document: dict[str, FrozenJsonValue],
+    key: str,
+    description: str,
+) -> int:
+    value = _required_frozen_value(document, key, description)
+    if type(value) is not int:
+        raise TypeError(f"{description}.{key} must be an integer")
+    return value
 
 
 def _deserialization_failure(
