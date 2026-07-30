@@ -86,8 +86,12 @@ from poe_backup_orchestrator.services.storage_baseline_composition import (
     PreservationBaselineCompositionError,
 )
 from poe_backup_orchestrator.services.storage_baseline_validation import (
+    EvidenceLoadStatus,
+    FilesystemPreservationEvidenceLoader,
+    LoadedPreservationEvidence,
     PreservationBaselineValidationError,
     PreservationEvidenceAdapter,
+    PreservationEvidenceLoader,
     ValidationAdapterRegistry,
 )
 from poe_backup_orchestrator.services.storage_content_capture import (
@@ -198,6 +202,9 @@ __all__ = [
     "ContentIntegrityVerificationError",
     "ContentIntegrityVerificationPolicy",
     "ContentIntegrityVerifier",
+    "EvidenceLoadStatus",
+    "FilesystemPreservationEvidenceLoader",
+    "LoadedPreservationEvidence",
     "ContentIntegrityEvidencePersistence",
     "ContentIntegrityPersistenceError",
     "PersistedContentIntegrityEvidence",
@@ -216,5 +223,6 @@ __all__ += [
 __all__ += [
     "PreservationBaselineValidationError",
     "PreservationEvidenceAdapter",
+    "PreservationEvidenceLoader",
     "ValidationAdapterRegistry",
 ]
