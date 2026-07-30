@@ -81,6 +81,10 @@ from poe_backup_orchestrator.services.runtime_validation import (
     validate_runtime,
 )
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
+from poe_backup_orchestrator.services.storage_baseline_acceptance import (
+    PreservationBaselineAcceptanceEvaluationError,
+    PreservationBaselineAcceptanceEvaluator,
+)
 from poe_backup_orchestrator.services.storage_baseline_composition import (
     PreservationBaselineComposer,
     PreservationBaselineCompositionError,
@@ -253,6 +257,11 @@ __all__ = [
 __all__ += [
     "require_valid_runtime",
     "validate_runtime",
+]
+
+__all__ += [
+    "PreservationBaselineAcceptanceEvaluationError",
+    "PreservationBaselineAcceptanceEvaluator",
 ]
 
 __all__ += [
