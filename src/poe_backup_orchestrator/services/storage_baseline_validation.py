@@ -15,6 +15,11 @@ from poe_backup_orchestrator.models.storage_baseline_candidate import (
     PreservationEvidenceReference,
     PreservationEvidenceType,
 )
+from poe_backup_orchestrator.models.storage_baseline_validation import (
+    ValidationFinding,
+    ValidationFindingCategory,
+    ValidationFindingSeverity,
+)
 
 
 class PreservationBaselineValidationError(Exception):
@@ -702,6 +707,240 @@ class PreservationEvidenceReconciliationService:
             duplicate_integrity_paths=duplicate_integrity_paths,
             counts=counts,
         )
+
+
+@dataclass(frozen=True, slots=True)
+class PreservationValidationFindingGenerationService:
+    # Generate deterministic findings from reconciliation observations only.
+
+    def generate(
+        self,
+        *,
+        reconciliation: PreservationEvidenceReconciliation,
+        inventory_evidence_path: Path,
+        integrity_evidence_path: Path,
+    ) -> tuple[ValidationFinding, ...]:
+        inventory_path = _absolute_finding_path(
+            inventory_evidence_path,
+            "inventory_evidence_path",
+        )
+        integrity_path = _absolute_finding_path(
+            integrity_evidence_path,
+            "integrity_evidence_path",
+        )
+
+        drafts: list[_ValidationFindingDraft] = []
+        source_root_id = reconciliation.inventory_facts.source_root_id
+
+        if reconciliation.status is EvidenceReconciliationStatus.SOURCE_ROOT_MISMATCH:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=ValidationFindingCategory.SOURCE_ROOT_IDENTITY_MISMATCH,
+                    severity=ValidationFindingSeverity.CRITICAL,
+                    source_root_id=None,
+                    evidence_type=None,
+                    evidence_path=None,
+                    field_name="source_root_id",
+                    expected=reconciliation.inventory_facts.source_root_id,
+                    observed=reconciliation.integrity_facts.source_root_id,
+                    detail=(
+                        "inventory and content-integrity evidence identify different source roots"
+                    ),
+                    validation_phase_rank=10,
+                )
+            )
+            return _finalize_findings(drafts)
+
+        if reconciliation.status is EvidenceReconciliationStatus.RECONCILIATION_FAILED:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=ValidationFindingCategory.CONTRADICTORY_EVIDENCE,
+                    severity=ValidationFindingSeverity.CRITICAL,
+                    source_root_id=source_root_id,
+                    evidence_type=None,
+                    evidence_path=None,
+                    field_name="reconciliation_status",
+                    expected=EvidenceReconciliationStatus.RECONCILED.value,
+                    observed=reconciliation.detail_code,
+                    detail=(
+                        "preservation evidence could not be interpreted "
+                        "deterministically for reconciliation"
+                    ),
+                    validation_phase_rank=11,
+                )
+            )
+            return _finalize_findings(drafts)
+
+        if reconciliation.counts is None:
+            raise PreservationBaselineValidationError(
+                "reconciled evidence must expose count observations"
+            )
+
+        counts = reconciliation.counts
+        if counts.inventory_declared_item_count != counts.inventory_observed_record_count:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=ValidationFindingCategory.INVENTORY_RECONCILIATION_MISMATCH,
+                    severity=ValidationFindingSeverity.ERROR,
+                    source_root_id=source_root_id,
+                    evidence_type=PreservationEvidenceType.INVENTORY_EVIDENCE,
+                    evidence_path=inventory_path,
+                    field_name="declared_item_count",
+                    expected=str(counts.inventory_declared_item_count),
+                    observed=str(counts.inventory_observed_record_count),
+                    detail=(
+                        "inventory declared item count does not match its "
+                        "detailed record population"
+                    ),
+                    validation_phase_rank=11,
+                )
+            )
+
+        for relative_path in reconciliation.duplicate_inventory_paths:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=ValidationFindingCategory.DUPLICATE_EVIDENCE,
+                    severity=ValidationFindingSeverity.ERROR,
+                    source_root_id=source_root_id,
+                    evidence_type=PreservationEvidenceType.INVENTORY_EVIDENCE,
+                    evidence_path=inventory_path,
+                    field_name="relative_path",
+                    expected="unique",
+                    observed=relative_path,
+                    detail="inventory evidence contains a duplicate relative path",
+                    validation_phase_rank=11,
+                )
+            )
+
+        for relative_path in reconciliation.duplicate_integrity_paths:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=ValidationFindingCategory.DUPLICATE_EVIDENCE,
+                    severity=ValidationFindingSeverity.ERROR,
+                    source_root_id=source_root_id,
+                    evidence_type=PreservationEvidenceType.CONTENT_INTEGRITY_EVIDENCE,
+                    evidence_path=integrity_path,
+                    field_name="relative_path",
+                    expected="unique",
+                    observed=relative_path,
+                    detail=("content-integrity evidence contains a duplicate relative path"),
+                    validation_phase_rank=11,
+                )
+            )
+
+        for item in reconciliation.inventory_only:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=(ValidationFindingCategory.CONTENT_INTEGRITY_RECONCILIATION_MISMATCH),
+                    severity=ValidationFindingSeverity.ERROR,
+                    source_root_id=source_root_id,
+                    evidence_type=PreservationEvidenceType.CONTENT_INTEGRITY_EVIDENCE,
+                    evidence_path=integrity_path,
+                    field_name="relative_path",
+                    expected=item.relative_path,
+                    observed="missing",
+                    detail=("inventory item has no corresponding content-integrity evidence"),
+                    validation_phase_rank=11,
+                )
+            )
+
+        for item in reconciliation.integrity_only:
+            drafts.append(
+                _ValidationFindingDraft(
+                    category=ValidationFindingCategory.INVENTORY_RECONCILIATION_MISMATCH,
+                    severity=ValidationFindingSeverity.ERROR,
+                    source_root_id=source_root_id,
+                    evidence_type=PreservationEvidenceType.INVENTORY_EVIDENCE,
+                    evidence_path=inventory_path,
+                    field_name="relative_path",
+                    expected=item.relative_path,
+                    observed="missing",
+                    detail=("content-integrity item has no corresponding inventory record"),
+                    validation_phase_rank=11,
+                )
+            )
+
+        for item in reconciliation.matched:
+            if (
+                item.inventory_item_id is not None
+                and item.integrity_item_id is not None
+                and item.inventory_item_id != item.integrity_item_id
+            ):
+                drafts.append(
+                    _ValidationFindingDraft(
+                        category=ValidationFindingCategory.CONTRADICTORY_EVIDENCE,
+                        severity=ValidationFindingSeverity.ERROR,
+                        source_root_id=source_root_id,
+                        evidence_type=None,
+                        evidence_path=None,
+                        field_name=f"item_id:{item.relative_path}",
+                        expected=item.inventory_item_id,
+                        observed=item.integrity_item_id,
+                        detail=(
+                            "matched inventory and content-integrity records "
+                            "disagree on item identity"
+                        ),
+                        validation_phase_rank=10,
+                    )
+                )
+
+        return _finalize_findings(drafts)
+
+
+@dataclass(frozen=True, slots=True)
+class _ValidationFindingDraft:
+    category: ValidationFindingCategory
+    severity: ValidationFindingSeverity
+    source_root_id: str | None
+    evidence_type: PreservationEvidenceType | None
+    evidence_path: Path | None
+    field_name: str | None
+    expected: str | None
+    observed: str | None
+    detail: str
+    validation_phase_rank: int
+
+
+def _absolute_finding_path(path: Path, field_name: str) -> Path:
+    normalized = Path(path)
+    if not normalized.is_absolute():
+        raise ValueError(f"{field_name} must be absolute")
+    return normalized
+
+
+def _finding_draft_sort_key(draft: _ValidationFindingDraft) -> tuple[object, ...]:
+    return (
+        draft.source_root_id or "",
+        draft.evidence_type.value if draft.evidence_type is not None else "",
+        draft.validation_phase_rank,
+        draft.category.value,
+        draft.evidence_path.as_posix() if draft.evidence_path is not None else "",
+        draft.field_name or "",
+        draft.expected or "",
+        draft.observed or "",
+        draft.detail,
+    )
+
+
+def _finalize_findings(
+    drafts: list[_ValidationFindingDraft],
+) -> tuple[ValidationFinding, ...]:
+    ordered = sorted(drafts, key=_finding_draft_sort_key)
+    return tuple(
+        ValidationFinding(
+            sequence=sequence,
+            category=draft.category,
+            severity=draft.severity,
+            source_root_id=draft.source_root_id,
+            evidence_type=draft.evidence_type,
+            evidence_path=draft.evidence_path,
+            field_name=draft.field_name,
+            expected=draft.expected,
+            observed=draft.observed,
+            detail=draft.detail,
+        )
+        for sequence, draft in enumerate(ordered, start=1)
+    )
 
 
 @dataclass(frozen=True, slots=True)
