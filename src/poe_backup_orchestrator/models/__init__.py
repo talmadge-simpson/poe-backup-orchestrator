@@ -152,6 +152,18 @@ from poe_backup_orchestrator.models.runtime import (
     RuntimeValidationResult,
 )
 from poe_backup_orchestrator.models.sqlite_backup import SqliteBackupResult
+from poe_backup_orchestrator.models.storage_baseline_candidate import (
+    STORAGE_BASELINE_CANDIDATE_SCHEMA_VERSION,
+    EvidenceRequirementObservation,
+    EvidenceRequirementStatus,
+    PreservationBaselineCandidate,
+    PreservationBaselineCandidateIdentity,
+    PreservationBaselineCandidateScope,
+    PreservationEvidenceReference,
+    PreservationEvidenceRequirement,
+    PreservationEvidenceType,
+    stable_preservation_baseline_candidate_id,
+)
 from poe_backup_orchestrator.models.storage_baseline_manifest import (
     STORAGE_BASELINE_MANIFEST_SCHEMA_VERSION,
     BaselineManifestStatus,
@@ -381,4 +393,17 @@ __all__ += [
     "RestorePlanRequest",
     "RestorePlanValidation",
     "RestoreWarning",
+]
+
+__all__ += [
+    "STORAGE_BASELINE_CANDIDATE_SCHEMA_VERSION",
+    "EvidenceRequirementObservation",
+    "EvidenceRequirementStatus",
+    "PreservationBaselineCandidate",
+    "PreservationBaselineCandidateIdentity",
+    "PreservationBaselineCandidateScope",
+    "PreservationEvidenceReference",
+    "PreservationEvidenceRequirement",
+    "PreservationEvidenceType",
+    "stable_preservation_baseline_candidate_id",
 ]
