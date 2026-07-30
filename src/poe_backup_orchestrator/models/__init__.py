@@ -174,6 +174,19 @@ from poe_backup_orchestrator.models.storage_baseline_manifest import (
     InventoryTotals,
     PreservationBaselineManifest,
 )
+from poe_backup_orchestrator.models.storage_baseline_validation import (
+    STORAGE_BASELINE_VALIDATION_SCHEMA_VERSION,
+    EvidenceSchemaCompatibilityRule,
+    EvidenceValidationStatus,
+    PreservationBaselineValidationIdentity,
+    PreservationBaselineValidationResult,
+    PreservationEvidenceValidationPolicy,
+    ValidatedEvidenceReference,
+    ValidationFinding,
+    ValidationFindingCategory,
+    ValidationFindingSeverity,
+    stable_preservation_baseline_validation_id,
+)
 from poe_backup_orchestrator.models.storage_content_capture import (
     STORAGE_CONTENT_CAPTURE_SCHEMA_VERSION,
     ContentCaptureException,
@@ -406,4 +419,18 @@ __all__ += [
     "PreservationEvidenceRequirement",
     "PreservationEvidenceType",
     "stable_preservation_baseline_candidate_id",
+]
+
+__all__ += [
+    "STORAGE_BASELINE_VALIDATION_SCHEMA_VERSION",
+    "EvidenceSchemaCompatibilityRule",
+    "EvidenceValidationStatus",
+    "PreservationBaselineValidationIdentity",
+    "PreservationBaselineValidationResult",
+    "PreservationEvidenceValidationPolicy",
+    "ValidatedEvidenceReference",
+    "ValidationFinding",
+    "ValidationFindingCategory",
+    "ValidationFindingSeverity",
+    "stable_preservation_baseline_validation_id",
 ]
