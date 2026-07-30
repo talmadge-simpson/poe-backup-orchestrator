@@ -85,6 +85,11 @@ from poe_backup_orchestrator.services.storage_baseline_composition import (
     PreservationBaselineComposer,
     PreservationBaselineCompositionError,
 )
+from poe_backup_orchestrator.services.storage_baseline_validation import (
+    PreservationBaselineValidationError,
+    PreservationEvidenceAdapter,
+    ValidationAdapterRegistry,
+)
 from poe_backup_orchestrator.services.storage_content_capture import (
     ContentCapturePolicy,
     InventoryContentCaptureError,
@@ -206,4 +211,10 @@ __all__ += [
 __all__ += [
     "PreservationBaselineComposer",
     "PreservationBaselineCompositionError",
+]
+
+__all__ += [
+    "PreservationBaselineValidationError",
+    "PreservationEvidenceAdapter",
+    "ValidationAdapterRegistry",
 ]
