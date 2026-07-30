@@ -164,6 +164,18 @@ from poe_backup_orchestrator.models.storage_baseline_acceptance import (
     PreservationBaselineAcceptanceRecommendation,
     stable_preservation_baseline_acceptance_evaluation_id,
 )
+from poe_backup_orchestrator.models.storage_baseline_authorization import (
+    STORAGE_BASELINE_AUTHORIZATION_SCHEMA_VERSION,
+    AuthorizationAuthority,
+    AuthorizationConditionDecision,
+    AuthorizationConditionDisposition,
+    AuthorizationDecisionOutcome,
+    AuthorizationScope,
+    PilotAuthorization,
+    PreservationBaselineAuthorizationDecision,
+    PreservationBaselineAuthorizationIdentity,
+    stable_preservation_baseline_authorization_id,
+)
 from poe_backup_orchestrator.models.storage_baseline_candidate import (
     STORAGE_BASELINE_CANDIDATE_SCHEMA_VERSION,
     EvidenceRequirementObservation,
@@ -251,6 +263,16 @@ from poe_backup_orchestrator.models.storage_inventory_assembly import (
 )
 
 __all__ = [
+    "STORAGE_BASELINE_AUTHORIZATION_SCHEMA_VERSION",
+    "AuthorizationAuthority",
+    "AuthorizationConditionDecision",
+    "AuthorizationConditionDisposition",
+    "AuthorizationDecisionOutcome",
+    "AuthorizationScope",
+    "PilotAuthorization",
+    "PreservationBaselineAuthorizationDecision",
+    "PreservationBaselineAuthorizationIdentity",
+    "stable_preservation_baseline_authorization_id",
     "RESTORE_EXECUTION_RECORD_SCHEMA_VERSION",
     "RestoreExecutionRecord",
     "OperationalAcceptanceStatus",
