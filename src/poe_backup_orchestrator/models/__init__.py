@@ -216,6 +216,25 @@ from poe_backup_orchestrator.models.storage_baseline_candidate import (
     PreservationEvidenceType,
     stable_preservation_baseline_candidate_id,
 )
+from poe_backup_orchestrator.models.storage_baseline_classification import (
+    STORAGE_BASELINE_CLASSIFICATION_POLICY_SCHEMA_VERSION,
+    STORAGE_BASELINE_CLASSIFICATION_SCHEMA_VERSION,
+    AcceptedBaselineClassificationCandidate,
+    AcceptedBaselineClassificationDimension,
+    AcceptedBaselineClassificationFactReference,
+    AcceptedBaselineClassificationObservation,
+    AcceptedBaselineClassificationObservationKind,
+    AcceptedBaselineClassificationObservationSet,
+    AcceptedBaselineClassificationObservationSetIdentity,
+    AcceptedBaselineClassificationPolicy,
+    AcceptedBaselineClassificationPolicyIdentity,
+    AcceptedBaselineClassificationPredicate,
+    AcceptedBaselineClassificationRule,
+    AcceptedBaselineClassificationState,
+    AcceptedBaselineClassificationSubject,
+    stable_accepted_baseline_classification_observation_set_id,
+    stable_accepted_baseline_classification_policy_id,
+)
 from poe_backup_orchestrator.models.storage_baseline_manifest import (
     STORAGE_BASELINE_MANIFEST_SCHEMA_VERSION,
     BaselineManifestStatus,
@@ -509,6 +528,26 @@ __all__ += [
     "AcceptedBaselineAnalysisProfileIdentity",
     "stable_accepted_baseline_analysis_context_id",
     "stable_accepted_baseline_analysis_profile_id",
+]
+
+__all__ += [
+    "STORAGE_BASELINE_CLASSIFICATION_POLICY_SCHEMA_VERSION",
+    "STORAGE_BASELINE_CLASSIFICATION_SCHEMA_VERSION",
+    "AcceptedBaselineClassificationCandidate",
+    "AcceptedBaselineClassificationDimension",
+    "AcceptedBaselineClassificationFactReference",
+    "AcceptedBaselineClassificationObservation",
+    "AcceptedBaselineClassificationObservationKind",
+    "AcceptedBaselineClassificationObservationSet",
+    "AcceptedBaselineClassificationObservationSetIdentity",
+    "AcceptedBaselineClassificationPolicy",
+    "AcceptedBaselineClassificationPolicyIdentity",
+    "AcceptedBaselineClassificationPredicate",
+    "AcceptedBaselineClassificationRule",
+    "AcceptedBaselineClassificationState",
+    "AcceptedBaselineClassificationSubject",
+    "stable_accepted_baseline_classification_observation_set_id",
+    "stable_accepted_baseline_classification_policy_id",
 ]
 
 __all__ += [
