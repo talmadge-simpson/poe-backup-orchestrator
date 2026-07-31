@@ -114,6 +114,13 @@ from poe_backup_orchestrator.services.storage_baseline_authorization_persistence
     PreservationBaselineAuthorizationSerializer,
     PreservationBaselineAuthorizationStore,
 )
+from poe_backup_orchestrator.services.storage_baseline_classification import (
+    AcceptedBaselineClassificationContextError,
+    AcceptedBaselineClassificationError,
+    AcceptedBaselineClassificationEvaluationError,
+    AcceptedBaselineClassificationPolicyError,
+    AcceptedBaselineClassificationService,
+)
 from poe_backup_orchestrator.services.storage_baseline_composition import (
     PreservationBaselineComposer,
     PreservationBaselineCompositionError,
@@ -315,6 +322,14 @@ __all__ += [
     "AcceptedBaselineAnalysisIntakeService",
     "AcceptedBaselineEvidenceAuthenticationError",
     "AcceptedBaselineReferenceVerificationError",
+]
+
+__all__ += [
+    "AcceptedBaselineClassificationContextError",
+    "AcceptedBaselineClassificationError",
+    "AcceptedBaselineClassificationEvaluationError",
+    "AcceptedBaselineClassificationPolicyError",
+    "AcceptedBaselineClassificationService",
 ]
 
 __all__ += [
