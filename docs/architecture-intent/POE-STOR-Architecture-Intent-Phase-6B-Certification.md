@@ -432,8 +432,7 @@ Any byte change invalidates the prior approval. The changed harness requires a
 new byte count, a new SHA-256, a new complete-source review, and new explicit
 human execution approval before any instruction from it may execute.
 
-For the prepared candidate harness, the frozen execution definition submitted
-for approval is:
+The Attempt 1 frozen execution definition was:
 
 - path:
   `/tmp/poe-phase-6b-certification-preparation.5AGJgZ/phase_6b_certification_harness.py`;
@@ -445,22 +444,51 @@ for approval is:
 - execution command:
   `/home/talmadge/poe-backup-orchestrator/.venv/bin/python /tmp/poe-phase-6b-certification-preparation.5AGJgZ/phase_6b_certification_harness.py`.
 
-This definition remains a candidate until explicit certification-execution
-approval is granted.
+Attempt 1 was executed and failed. Its definition and evidence remain historical
+and must not be reused or retroactively validated. Every later attempt requires
+its own byte count, SHA-256, path, interpreter identities, command,
+complete-source review, and explicit execution approval.
 
 ### 14.2 Pre-execution Chain-of-custody Gate
 
 Immediately before the first harness instruction is imported or executed, an
 external pre-execution gate must independently calculate and record the actual
 harness byte count, actual harness SHA-256, resolved harness path, actual
-interpreter path and Python version, and exact command about to execute.
+interpreter invocation path, canonical interpreter executable, Python version,
+and exact command about to execute.
 
 The external gate must compare those observations with the approved frozen
-definition. Execution must stop before importing or running the harness if the
-observed byte count differs from `14140` or the observed SHA-256 differs from
-`cacf44eca9428a8ab12002dd62608b26e87c7ccb6a1ea24de53b1ad924923108`.
-Path, interpreter, and command mismatches also fail the governed chain of
-custody and prohibit execution until explicitly reviewed and approved.
+definition for that attempt. Execution must stop before importing or running the
+harness if the observed byte count or SHA-256 differs from the separately
+approved values. Harness-path, interpreter-identity, Python-version, or command
+mismatches also fail the governed chain of custody and prohibit execution until
+explicitly reviewed and approved.
+
+Interpreter identity has three distinct governed attributes:
+
+1. the approved interpreter invocation path, which is the exact path written in
+   the approved execution command;
+2. the approved canonical interpreter executable, which is the expected result
+   of resolving that invocation path through symlinks; and
+3. the approved Python version returned by the invocation path.
+
+The gate compares invocation path to invocation path and canonical executable
+to canonical executable. Neither value may be silently substituted for the
+other. Resolution of an approved virtual-environment invocation path to its
+separately approved canonical executable is not a mismatch. The exact command
+must nevertheless use the approved invocation path.
+
+For a proposed Attempt 2, these interpreter attributes are:
+
+- invocation path:
+  `/home/talmadge/poe-backup-orchestrator/.venv/bin/python`;
+- canonical executable: `/usr/bin/python3.13`; and
+- Python version: `3.13.5`.
+
+Attempt 1 failed chain-of-custody because the architecture had not separately
+approved the canonical executable before execution. This clarification governs
+only a future, separately reviewed and approved attempt. It does not
+retroactively validate Attempt 1.
 
 The certification evidence must record fields equivalent to:
 
@@ -473,9 +501,15 @@ The certification evidence must record fields equivalent to:
 - Approved harness path;
 - Resolved harness path;
 - Path match;
-- Approved interpreter;
-- Observed interpreter;
-- Interpreter match;
+- Approved interpreter invocation path;
+- Observed interpreter invocation path;
+- Invocation-path match;
+- Approved canonical interpreter executable;
+- Observed canonical interpreter executable;
+- Canonical-executable match;
+- Approved Python version;
+- Observed Python version;
+- Python-version match;
 - Approved execution command;
 - Observed execution command;
 - Command match; and
@@ -684,6 +718,27 @@ The public publisher must:
 - perform no repair or cleanup of pre-existing state; and
 - preserve the causal and classification evidence required by the approved
   contract.
+
+The incomplete-state comparison must distinguish:
+
+- pre-existing semantic publication state;
+- governed lock infrastructure;
+- temporary files owned by the active attempt; and
+- final immutable publication artifacts and sidecars.
+
+The deliberately pre-existing semantic artifact must remain byte-for-byte
+unchanged. No missing accepted-baseline artifact, accepted-baseline sidecar,
+reference artifact, or reference sidecar may be published. No pre-existing
+semantic artifact may be repaired, replaced, removed, or normalized, and the
+governed conflict must be raised.
+
+Creation or reuse of the destination-scoped lock file is expected lock
+infrastructure, not semantic evidence mutation. Lock files and `.locks`
+directory entries must therefore be excluded from the semantic-state snapshot
+comparison. Active-attempt temporary infrastructure that is not a final
+semantic artifact must also be classified separately and handled according to
+the certified cleanup contract. These distinctions do not weaken fail-closed
+publication behavior or permit semantic-state mutation.
 
 The harness may remove this synthetic directory only after recording the
 failure evidence.
