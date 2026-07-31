@@ -81,6 +81,17 @@ from poe_backup_orchestrator.services.runtime_validation import (
     validate_runtime,
 )
 from poe_backup_orchestrator.services.sqlite_backup import create_sqlite_backup
+from poe_backup_orchestrator.services.storage_accepted_baseline import (
+    AcceptedPreservationBaselineConflictError,
+    AcceptedPreservationBaselineConstructionError,
+    AcceptedPreservationBaselineConstructor,
+    AcceptedPreservationBaselineError,
+    AcceptedPreservationBaselineLockError,
+    AcceptedPreservationBaselinePublicationError,
+    AcceptedPreservationBaselinePublisher,
+    AcceptedPreservationBaselineSerializer,
+    PersistedAuthorizationVerificationError,
+)
 from poe_backup_orchestrator.services.storage_baseline_acceptance import (
     PreservationBaselineAcceptanceEvaluationError,
     PreservationBaselineAcceptanceEvaluator,
@@ -169,6 +180,15 @@ from poe_backup_orchestrator.services.storage_inventory_persistence import (
 )
 
 __all__ = [
+    "AcceptedPreservationBaselineConflictError",
+    "AcceptedPreservationBaselineConstructionError",
+    "AcceptedPreservationBaselineConstructor",
+    "AcceptedPreservationBaselineError",
+    "AcceptedPreservationBaselineLockError",
+    "AcceptedPreservationBaselinePublicationError",
+    "AcceptedPreservationBaselinePublisher",
+    "AcceptedPreservationBaselineSerializer",
+    "PersistedAuthorizationVerificationError",
     "PreservationBaselineAuthorizationDecisionAssembler",
     "PreservationBaselineAuthorizationError",
     "PreservationBaselineAuthorizationConflictError",
