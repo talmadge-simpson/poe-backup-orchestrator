@@ -89,6 +89,13 @@ from poe_backup_orchestrator.services.storage_baseline_authorization import (
     PreservationBaselineAuthorizationDecisionAssembler,
     PreservationBaselineAuthorizationError,
 )
+from poe_backup_orchestrator.services.storage_baseline_authorization_persistence import (
+    PreservationBaselineAuthorizationConflictError,
+    PreservationBaselineAuthorizationLockError,
+    PreservationBaselineAuthorizationPersistenceError,
+    PreservationBaselineAuthorizationSerializer,
+    PreservationBaselineAuthorizationStore,
+)
 from poe_backup_orchestrator.services.storage_baseline_composition import (
     PreservationBaselineComposer,
     PreservationBaselineCompositionError,
@@ -164,6 +171,11 @@ from poe_backup_orchestrator.services.storage_inventory_persistence import (
 __all__ = [
     "PreservationBaselineAuthorizationDecisionAssembler",
     "PreservationBaselineAuthorizationError",
+    "PreservationBaselineAuthorizationConflictError",
+    "PreservationBaselineAuthorizationLockError",
+    "PreservationBaselineAuthorizationPersistenceError",
+    "PreservationBaselineAuthorizationSerializer",
+    "PreservationBaselineAuthorizationStore",
     "build_runtime_recovery_inspector",
     "RuntimeLifecycleCoordinator",
     "RuntimeLifecycle",
