@@ -174,6 +174,20 @@ from poe_backup_orchestrator.models.storage_baseline_acceptance import (
     PreservationBaselineAcceptanceRecommendation,
     stable_preservation_baseline_acceptance_evaluation_id,
 )
+from poe_backup_orchestrator.models.storage_baseline_analysis import (
+    STORAGE_BASELINE_ANALYSIS_PROFILE_SCHEMA_VERSION,
+    STORAGE_BASELINE_ANALYSIS_SCHEMA_VERSION,
+    AcceptedBaselineAnalysisContext,
+    AcceptedBaselineAnalysisContextIdentity,
+    AcceptedBaselineAnalysisEvidence,
+    AcceptedBaselineAnalysisEvidenceRequirement,
+    AcceptedBaselineAnalysisEvidenceRule,
+    AcceptedBaselineAnalysisEvidenceStatus,
+    AcceptedBaselineAnalysisProfile,
+    AcceptedBaselineAnalysisProfileIdentity,
+    stable_accepted_baseline_analysis_context_id,
+    stable_accepted_baseline_analysis_profile_id,
+)
 from poe_backup_orchestrator.models.storage_baseline_authorization import (
     STORAGE_BASELINE_AUTHORIZATION_SCHEMA_VERSION,
     AuthorizationAuthority,
@@ -480,6 +494,21 @@ __all__ += [
     "AcceptancePolicyRule",
     "PreservationBaselineAcceptanceRecommendation",
     "stable_preservation_baseline_acceptance_evaluation_id",
+]
+
+__all__ += [
+    "STORAGE_BASELINE_ANALYSIS_PROFILE_SCHEMA_VERSION",
+    "STORAGE_BASELINE_ANALYSIS_SCHEMA_VERSION",
+    "AcceptedBaselineAnalysisContext",
+    "AcceptedBaselineAnalysisContextIdentity",
+    "AcceptedBaselineAnalysisEvidence",
+    "AcceptedBaselineAnalysisEvidenceRequirement",
+    "AcceptedBaselineAnalysisEvidenceRule",
+    "AcceptedBaselineAnalysisEvidenceStatus",
+    "AcceptedBaselineAnalysisProfile",
+    "AcceptedBaselineAnalysisProfileIdentity",
+    "stable_accepted_baseline_analysis_context_id",
+    "stable_accepted_baseline_analysis_profile_id",
 ]
 
 __all__ += [
