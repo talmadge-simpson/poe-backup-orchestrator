@@ -799,6 +799,10 @@ Low-overhead evidence MAY observe shorter continuation prompts, fewer repeated r
 
 ES-3 may later reference this standard but is not created here. ES-4 remains machine-checkable architecture validation; this standard defines no schema, validator, or executable model. ES-5 remains canonical for tier/model semantics; ES-6 consumes its advisory tiers and creates no automatic routing. ES-9 remains multi-agent readiness; this standard creates no delegation, orchestration, voting, shared state, or multi-agent capability. ES-6 does not authorize preparation, implementation, approval, or operation of any of them.
 
+## ES-7 lifecycle-evidence discoverability
+
+The subordinate `docs/engineering-system/standards/Lifecycle-Evidence-Retention-and-Identity-Standard.md` defines deterministic evidence records for occurrences of these responsibilities and their retention and deletion lineage. It does not modify any responsibility token, ordering, field, entry or exit criterion, transition, recovery class, or authority boundary in this standard. Evidence conformance never establishes that a responsibility occurred truthfully or authorizes entry to another state.
+
 ## Conformance Statement
 
 An artifact conforms only when it applies this standard as documentation-only, preserves every stated separation and invariant, uses current attributable evidence, and obtains separate accountable-human authority for every responsibility and external action. Conformance neither grants nor implies any authority.
