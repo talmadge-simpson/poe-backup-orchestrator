@@ -121,6 +121,13 @@ from poe_backup_orchestrator.services.storage_baseline_classification import (
     AcceptedBaselineClassificationPolicyError,
     AcceptedBaselineClassificationService,
 )
+from poe_backup_orchestrator.services.storage_baseline_classification_findings import (
+    AcceptedBaselineClassificationFindingError,
+    AcceptedBaselineClassificationFindingEvaluationError,
+    AcceptedBaselineClassificationFindingInputError,
+    AcceptedBaselineClassificationFindingPolicyError,
+    AcceptedBaselineClassificationFindingService,
+)
 from poe_backup_orchestrator.services.storage_baseline_composition import (
     PreservationBaselineComposer,
     PreservationBaselineCompositionError,
@@ -330,6 +337,11 @@ __all__ += [
     "AcceptedBaselineClassificationEvaluationError",
     "AcceptedBaselineClassificationPolicyError",
     "AcceptedBaselineClassificationService",
+    "AcceptedBaselineClassificationFindingError",
+    "AcceptedBaselineClassificationFindingEvaluationError",
+    "AcceptedBaselineClassificationFindingInputError",
+    "AcceptedBaselineClassificationFindingPolicyError",
+    "AcceptedBaselineClassificationFindingService",
 ]
 
 __all__ += [
