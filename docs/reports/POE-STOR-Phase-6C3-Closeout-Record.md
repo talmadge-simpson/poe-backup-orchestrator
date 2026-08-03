@@ -6,29 +6,31 @@
 
 **ES-6 responsibility:** `CLOSEOUT`
 
-**Current ES-1 lifecycle status:** `CERTIFIED`
+**Prior ES-1 lifecycle status:** `CERTIFIED`
 
-**Candidate closeout disposition:** `CLOSEOUT PASSED`
+**Resulting ES-1 lifecycle status:** `CLOSED`
 
-**Accountable-human decision:** Not yet recorded; this document is a closeout
-candidate awaiting an attributable accountable-human closeout decision
+**Closeout disposition:** `CLOSEOUT PASSED`
 
-**Closeout date:** 2026-08-03
+**Accountable-human decision maker:** August Talmadge Simpson
+
+**Authority kind:** `ACCOUNTABLE_HUMAN_AUTHORIZATION`
+
+**Decision date:** 2026-08-03
 
 ## 1. Purpose and authority boundary
 
-This candidate reconciles the evidence for a bounded Phase 6C-3 closeout decision. It
+This record reconciles the evidence for the bounded Phase 6C-3 closeout decision. It
 preserves the exact architecture, implementation, integration, certification,
 repository, discrepancy, and residual-obligation evidence for the subject.
 
-The candidate proposes finding Phase 6C-3 complete within its approved deterministic,
-in-memory classification-finding and result-assembly boundary. It does not identify
-an accountable issuer or claim that an accountable-human closeout decision has
-occurred because no such decision is retained in repository evidence. The canonical
-ES-1 status remains `CERTIFIED`. An attributable accountable-human closeout decision
-would establish whether the subject transitions to `CLOSED`; commit and publication
-would remain separate repository transitions that retain and expose evidence of that
-decision but do not themselves change lifecycle status.
+The accountable human accepts Phase 6C-3 as complete within its approved
+deterministic, in-memory classification-finding and result-assembly boundary and
+authorizes the transition from `CERTIFIED` to `CLOSED` with disposition
+`CLOSEOUT PASSED`. This amendment supplies the attributable decision that was missing
+from the published record. Publication of the original closeout record did not create
+this decision, and commit or publication of this corrected evidence remains a
+separate repository transition that does not independently change lifecycle status.
 
 This record does not reopen architecture, modify implementation or tests, alter the
 certification record, perform operational acceptance, or grant persistence,
@@ -69,15 +71,15 @@ The required predecessor responsibilities are complete and evidenced:
    published, integrated, validated, and published on authoritative `main`;
 3. certification evaluated the integrated subject, passed all required gates, and
    was published on authoritative `main`; and
-4. this `CLOSEOUT` candidate reconciles the retained evidence, scope,
+4. this `CLOSEOUT` record reconciles the retained evidence, scope,
    exclusions, risks, deferred matters, branch disposition, discrepancies, and
    withheld authorities.
 
 ES-6 defines no separate closeout-review or closeout-approval responsibility.
-This candidate therefore awaits the attributable accountable-human closeout decision
-required for any ES-1 transition to `CLOSED`. ES-6 keeps that lifecycle decision,
-commit, and publication distinct; neither a commit nor publication may substitute for
-the decision, and each repository transition remains separately authorized.
+The attributable accountable-human decision is now retained and authorizes the ES-1
+transition from `CERTIFIED` to `CLOSED`. ES-6 keeps that lifecycle decision, commit,
+and publication distinct; neither a commit nor publication substitutes for the
+decision, and each repository transition remains separately authorized.
 
 ## 4. Validation summary
 
@@ -156,15 +158,15 @@ Future persistence must preserve exact identities, lineage, canonical bytes,
 durability, immutable conflict handling, permissions, replay, locking, and partial-
 state failure semantics without promoting unapproved evidence into authority.
 
-No accountable-human closeout decision is yet retained. Commit and publication of a
-subsequently approved closeout record would be repository-evidence transitions only;
-they would not substitute for or independently create the lifecycle decision.
+The previously missing accountable-human closeout decision is retained in Section 13.
+Commit and publication of this corrected record are repository-evidence transitions
+only; they do not substitute for or independently create the lifecycle decision.
 
 ## 8. Deferred matters
 
 Deferred matters are:
 
-- separately authorized commit and publication of this closeout record;
+- separately authorized commit and publication of this corrected closeout record;
 - Phase 6C-4 architecture preparation under the parent architecture;
 - all later Phase 6C responsibilities and phase-level certification;
 - operational acceptance, which was not required for this computation-only slice;
@@ -207,30 +209,54 @@ was clean. The only closeout change is this unstaged report candidate. No source
 test, certification, architecture, Engineering System, ES-7, remote, or Git-history
 state was altered.
 
-The closeout candidate must remain unstaged pending another independent publication
-review and an attributable accountable-human closeout decision. Any later commit and
-publication require their own authority.
+This corrected closeout evidence must remain unstaged pending separately authorized
+publication. The accountable-human closeout decision is retained in Section 13; any
+later commit and publication require their own authority.
 
 ## 12. Next product-development responsibility
 
-After an attributable accountable-human Phase 6C-3 closeout decision, the
-repository-supported next POE product-development responsibility is ES-6
-`ARCHITECTURE_PREPARATION` for Phase 6C-4 — Classification Evidence Persistence and
-Reference Publication. Commit and publication of the closeout record remain separate
-repository-evidence transitions.
+After the attributable accountable-human Phase 6C-3 closeout decision retained in
+this record, the repository-supported next POE product-development responsibility is
+ES-6 `ARCHITECTURE_PREPARATION` for Phase 6C-4 — Classification Evidence Persistence
+and Reference Publication. Commit and publication of the closeout record remain
+separate repository-evidence transitions.
 
 That responsibility is supported by the approved Phase 6C dependency sequence and
-the explicit Slice 6C-3 persistence boundary. No Phase 6C-4 architecture artifact or
-lifecycle evidence currently exists. Therefore the next responsibility is to prepare
-a separately reviewable Phase 6C-4 architecture intent, not to implement Phase 6C-4.
-It requires distinct accountable-human transition authorization after the Phase 6C-3
-closeout decision and does not arise from closeout-record publication.
+the explicit Slice 6C-3 persistence boundary. At original closeout publication, no
+Phase 6C-4 architecture artifact or lifecycle evidence existed. A later untracked
+Phase 6C-4 architecture candidate is outside this closeout decision and receives no
+approval, review, or implementation authority from it. Phase 6C-4 requires distinct
+accountable-human transition authorization and does not arise from closeout-record
+publication.
 
-## 13. Candidate closeout disposition
+## 13. Accountable-human closeout decision
 
 All substantive Phase 6C-3 architecture, implementation, integration,
 certification, scope, and evidence responsibilities are complete. No defect blocks
-closeout. This candidate recommends the following disposition but does not record or
-manufacture the required accountable-human decision.
+closeout. August Talmadge Simpson, acting as the accountable human for the governed
+Phase 6C-3 subject, makes the following attributable decision under authority kind
+`ACCOUNTABLE_HUMAN_AUTHORIZATION` on 2026-08-03:
 
-**Proposed disposition:** `CLOSEOUT PASSED`
+- the certified Phase 6C-3 subject is accepted;
+- all required Phase 6C-3 implementation, validation, integration, certification,
+  and closeout prerequisites were completed;
+- the residual risks and deferred matters recorded in this record are accepted
+  within their stated boundaries;
+- no Phase 6C-3 responsibility remains open;
+- Phase 6C-3 is authorized to transition from `CERTIFIED` to `CLOSED`; and
+- the closeout disposition is `CLOSEOUT PASSED`.
+
+The decision basis is the published Phase 6C-3 certification record, this published
+Phase 6C-3 closeout record, the certified integrated subject identity recorded in
+Section 2, and the accepted residual risks and deferred matters in Sections 7 and 8.
+Publication of the original record alone did not create this decision. This retained
+evidence supplies the previously missing attributable decision, and Phase 6C-3 is
+`CLOSED`.
+
+This decision grants no Phase 6C-4 architecture approval, no Phase 6C-4
+implementation authority, and no later-phase authority. It does not reopen Phase
+6C-3 architecture or implementation.
+
+**Decision identity:** `POE-STOR-PHASE-6C3-CLOSEOUT`
+
+**Closeout disposition:** `CLOSEOUT PASSED`
