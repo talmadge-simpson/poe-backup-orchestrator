@@ -34,6 +34,26 @@ non-authority rules.
 Citations are ordered by source artifact identity, observation commit, bounded
 locator, and citation identity.
 
+### ES-KNOW-CITATION-es-7-lifecycle-evidence-standard
+
+- Governed subject: ES-7 lifecycle evidence, retention, and identity contracts
+- Record type: Citation
+- Knowledge state: `KNOWN`
+- Source artifact: `Engineering-System-Lifecycle-Evidence-Retention-and-Identity-Standard`
+- Source class: Normative Standard
+- Path: `docs/engineering-system/standards/Lifecycle-Evidence-Retention-and-Identity-Standard.md`
+- Immutable observation commit: `UNAVAILABLE` — implementation candidate is uncommitted
+- Bounded locator: metadata; artifact, identity, retention, tombstone, authority, and conformance sections
+- Claim: deterministic subordinate lifecycle-evidence contract and non-authorizing boundary
+- Role: `SUPPORTS`
+- Applicability: ES-7 implementation candidate only until repository integration
+- Verification state: `KNOWN`
+- Temporal mode: `CURRENT_AT_WORKTREE_IDENTITY`
+- Lineage: approved ES-7 candidate SHA-256 `6ffa1464a30b239882c9aabc4b0961b753eaf2462d09beb2c271612f54eb0b1f`
+- Limitations: derivative index entry creates no authority and does not claim approval, commit, integration, or certification
+- Ordering key: `02/es-7-lifecycle-evidence-standard/ES-KNOW-CITATION-es-7-lifecycle-evidence-standard/1.0`
+- Revision identity: `ES-KNOW-CITATION-es-7-lifecycle-evidence-standard/1.0`
+
 ### ES-KNOW-CITATION-agents-governance
 
 - Governed subject: repository governance principles

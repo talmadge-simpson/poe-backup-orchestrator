@@ -1,0 +1,408 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://poe.local/schemas/lifecycle-evidence-record.schema.json",
+  "title": "Engineering System lifecycle evidence artifacts",
+  "description": "A closed bounded fixture corpus containing independently identified ES-7 artifacts and declarative negative mutations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fixture_corpus_version", "positive_fixtures", "negative_fixtures"],
+  "properties": {
+    "fixture_corpus_version": { "const": "1.0.0" },
+    "positive_fixtures": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/positiveFixture" } },
+    "negative_fixtures": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/negativeFixture" } },
+    "staged_entry_fixtures": { "type": "array", "minItems": 8, "maxItems": 8, "items": { "$ref": "#/$defs/stagedEntryFixture" } },
+    "manifest_entry_fixtures": { "type": "array", "minItems": 11, "maxItems": 11, "items": { "$ref": "#/$defs/manifestEntryFixture" } }
+  },
+  "$defs": {
+    "artifact": { "oneOf": [{ "$ref": "#/$defs/lifecycleRecord" }, { "$ref": "#/$defs/retentionEvent" }, { "$ref": "#/$defs/deletionTombstone" }] },
+    "positiveFixture": { "type": "object", "additionalProperties": false, "required": ["fixture_id", "artifact"], "properties": { "fixture_id": { "$ref": "#/$defs/nonEmptyString" }, "artifact": { "$ref": "#/$defs/artifact" } } },
+    "negativeFixture": { "type": "object", "additionalProperties": false, "required": ["case_id", "base_fixture_id", "mutation", "expected_error"], "properties": { "case_id": { "$ref": "#/$defs/nonEmptyString" }, "base_fixture_id": { "$ref": "#/$defs/nonEmptyString" }, "mutation": { "type": "object", "minProperties": 1 }, "expected_error": { "$ref": "#/$defs/nonEmptyString" } } },
+    "stagedEntryFixture": { "type": "object", "additionalProperties": false, "required": ["fixture_id", "entry"], "properties": { "fixture_id": { "$ref": "#/$defs/nonEmptyString" }, "entry": { "$ref": "#/$defs/stagedEntry" } } },
+    "manifestEntryFixture": { "type": "object", "additionalProperties": false, "required": ["fixture_id", "entry"], "properties": { "fixture_id": { "$ref": "#/$defs/nonEmptyString" }, "entry": { "$ref": "#/$defs/manifestEntry" } } },
+    "decimal": { "type": "string", "pattern": "^(0|[1-9][0-9]*)$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+    },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason_code"],
+      "properties": {
+        "status": { "enum": ["NOT_APPLICABLE", "UNAVAILABLE"] },
+        "reason_code": { "type": "string", "minLength": 1 }
+      }
+    },
+    "stringOrStatus": {
+      "oneOf": [{ "$ref": "#/$defs/nonEmptyString" }, { "$ref": "#/$defs/status" }]
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_id", "actor_type", "actor_role", "display_name"],
+      "properties": {
+        "actor_id": { "$ref": "#/$defs/nonEmptyString" },
+        "actor_type": { "enum": ["ACCOUNTABLE_HUMAN", "HUMAN", "AI_MODEL", "SOFTWARE_SERVICE"] },
+        "actor_role": { "enum": ["ACCOUNTABLE_HUMAN", "PREPARER", "EXECUTOR", "REVIEWER", "DECISION_RECORDER", "OBSERVER"] },
+        "display_name": { "$ref": "#/$defs/nonEmptyString" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "actor_type": { "const": "ACCOUNTABLE_HUMAN" } } },
+          "then": { "properties": { "actor_role": { "const": "ACCOUNTABLE_HUMAN" } } },
+          "else": { "properties": { "actor_role": { "not": { "const": "ACCOUNTABLE_HUMAN" } } } }
+        }
+      ]
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority_id", "authority_kind", "issuer_actor_id", "governed_scope", "source_identity"],
+      "properties": {
+        "authority_id": { "$ref": "#/$defs/nonEmptyString" },
+        "authority_kind": { "enum": ["ACCOUNTABLE_HUMAN_AUTHORIZATION", "GOVERNANCE_ARTIFACT", "LEGAL_AUTHORITY", "RETENTION_ASSIGNMENT", "DELETION_AUTHORIZATION"] },
+        "issuer_actor_id": { "$ref": "#/$defs/nonEmptyString" },
+        "governed_scope": { "$ref": "#/$defs/nonEmptyString" },
+        "source_identity": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "assignmentAuthority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority_reference", "assigned_by_actor_id"],
+      "properties": {
+        "authority_reference": {
+          "allOf": [
+            { "$ref": "#/$defs/authority" },
+            { "properties": { "authority_kind": { "enum": ["RETENTION_ASSIGNMENT", "ACCOUNTABLE_HUMAN_AUTHORIZATION"] } } }
+          ]
+        },
+        "assigned_by_actor_id": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "contentIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "media_type", "byte_length"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "media_type": { "type": "string", "pattern": "^[a-z0-9.+-]+/[a-z0-9.+-]+$" },
+        "byte_length": { "$ref": "#/$defs/decimal" }
+      }
+    },
+    "packageIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["package_id"],
+      "properties": {
+        "package_id": { "type": "string", "pattern": "^ES-EVIDENCE-PACKAGE-SHA256-[0-9a-f]{64}$" }
+      }
+    },
+    "payloadLocation": { "type": "object", "additionalProperties": false, "required": ["location_identity", "content_identity"], "properties": { "location_identity": { "$ref": "#/$defs/location" }, "content_identity": { "$ref": "#/$defs/contentIdentity" } } },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location_scheme", "location_value"],
+      "properties": {
+        "location_scheme": { "enum": ["REPOSITORY_RELATIVE", "CONTENT_ADDRESSED", "EXTERNAL_IMMUTABLE"] },
+        "location_value": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "limitations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "entries", "reason_code"],
+      "properties": {
+        "status": { "enum": ["NONE", "PRESENT", "UNAVAILABLE", "NOT_APPLICABLE"] },
+        "entries": { "type": "array", "items": { "$ref": "#/$defs/nonEmptyString" }, "uniqueItems": true },
+        "reason_code": { "enum": ["NONE", "BOUNDED_LIMITATIONS_RECORDED", "LIMITATIONS_UNAVAILABLE", "FIELD_NOT_APPLICABLE"] }
+      },
+      "allOf": [
+        { "if": { "properties": { "status": { "const": "NONE" } } }, "then": { "properties": { "entries": { "maxItems": 0 }, "reason_code": { "const": "NONE" } } } },
+        { "if": { "properties": { "status": { "const": "PRESENT" } } }, "then": { "properties": { "entries": { "minItems": 1 }, "reason_code": { "const": "BOUNDED_LIMITATIONS_RECORDED" } } } },
+        { "if": { "properties": { "status": { "const": "UNAVAILABLE" } } }, "then": { "properties": { "entries": { "maxItems": 0 }, "reason_code": { "const": "LIMITATIONS_UNAVAILABLE" } } } },
+        { "if": { "properties": { "status": { "const": "NOT_APPLICABLE" } } }, "then": { "properties": { "entries": { "maxItems": 0 }, "reason_code": { "const": "FIELD_NOT_APPLICABLE" } } } }
+      ]
+    },
+    "responsibility": {
+      "enum": [
+        "DISCOVERY_CURRENT_STATE_ASSESSMENT", "ARCHITECTURE_PREPARATION", "ARCHITECTURE_REVIEW", "ARCHITECTURE_REVISION",
+        "ARCHITECTURE_APPROVAL", "ARCHITECTURE_COMMIT", "ARCHITECTURE_PUBLICATION", "ARCHITECTURE_INTEGRATION_PREPARATION",
+        "ARCHITECTURE_MERGE_CREATION", "ARCHITECTURE_INTEGRATION_VALIDATION", "ARCHITECTURE_MAIN_PUSH", "ARCHITECTURE_INTEGRATION_CLEANUP",
+        "IMPLEMENTATION_AUTHORIZATION", "IMPLEMENTATION", "IMPLEMENTATION_REVIEW", "TARGETED_IMPLEMENTATION_REVISION",
+        "IMPLEMENTATION_APPROVAL", "IMPLEMENTATION_COMMIT", "IMPLEMENTATION_PUBLICATION", "IMPLEMENTATION_INTEGRATION_PREPARATION",
+        "IMPLEMENTATION_MERGE_CREATION", "IMPLEMENTATION_INTEGRATION_VALIDATION", "IMPLEMENTATION_MAIN_PUSH", "IMPLEMENTATION_INTEGRATION_CLEANUP",
+        "CERTIFICATION", "OPERATIONAL_ACCEPTANCE", "CLOSEOUT", "INTERRUPTED_WORK_RECOVERY", "BLOCKED_DISCREPANT", "DEFERRED", "ABANDONED", "SUPERSEDED"
+      ]
+    },
+    "responsibilityArray": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/responsibility" },
+      "uniqueItems": true
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject_id", "title", "subject_class", "scope", "slice_identity"],
+      "properties": {
+        "subject_id": { "$ref": "#/$defs/nonEmptyString" }, "title": { "$ref": "#/$defs/nonEmptyString" },
+        "subject_class": { "$ref": "#/$defs/nonEmptyString" }, "scope": { "$ref": "#/$defs/nonEmptyString" },
+        "slice_identity": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "artifactBinding": {
+      "oneOf": [
+        { "$ref": "#/$defs/committedBinding" }, { "$ref": "#/$defs/uncommittedBinding" },
+        { "$ref": "#/$defs/stagedBinding" }, { "$ref": "#/$defs/untrackedBinding" },
+        { "$ref": "#/$defs/mixedBinding" }, { "$ref": "#/$defs/publishedBinding" },
+        { "$ref": "#/$defs/externalBinding" }
+      ]
+    },
+    "gitObjectId": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+    "fileMode": { "enum": ["100644", "100755", "120000", "160000"] },
+    "path": { "type": "string", "pattern": "^(?!/)(?!.*//)(?!.*(?:^|/)\\.\\.?(?:/|$))(?!.*\\\\).+$" },
+    "pathArray": { "type": "array", "items": { "$ref": "#/$defs/path" }, "uniqueItems": true },
+    "notApplicable": { "type": "object", "additionalProperties": false, "required": ["status", "reason_code"], "properties": { "status": { "const": "NOT_APPLICABLE" }, "reason_code": { "const": "FIELD_NOT_APPLICABLE" } } },
+    "worktreeIdentity": { "type": "object", "additionalProperties": false, "required": ["worktree_sha256", "worktree_git_object_id", "worktree_byte_length", "worktree_mode"], "properties": { "worktree_sha256": { "$ref": "#/$defs/sha256" }, "worktree_git_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "worktree_byte_length": { "$ref": "#/$defs/decimal" }, "worktree_mode": { "$ref": "#/$defs/fileMode" } } },
+    "absentWorktreeIdentity": { "type": "object", "additionalProperties": false, "required": ["worktree_sha256", "worktree_git_object_id", "worktree_byte_length", "worktree_mode"], "properties": { "worktree_sha256": { "$ref": "#/$defs/notApplicable" }, "worktree_git_object_id": { "$ref": "#/$defs/notApplicable" }, "worktree_byte_length": { "$ref": "#/$defs/notApplicable" }, "worktree_mode": { "$ref": "#/$defs/notApplicable" } } },
+    "committedBinding": { "oneOf": [{ "$ref": "#/$defs/committedSingleBinding" }, { "$ref": "#/$defs/committedTreeBinding" }] },
+    "committedSingleBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "commit_id", "root_tree_id", "path", "object_type", "object_id", "file_mode", "blob_sha256", "filter_state"], "properties": { "binding_mode": { "const": "COMMITTED" }, "commit_id": { "$ref": "#/$defs/gitObjectId" }, "root_tree_id": { "$ref": "#/$defs/gitObjectId" }, "path": { "$ref": "#/$defs/path" }, "object_type": { "enum": ["BLOB", "SYMLINK", "SUBMODULE"] }, "object_id": { "$ref": "#/$defs/gitObjectId" }, "file_mode": { "$ref": "#/$defs/fileMode" }, "blob_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "$ref": "#/$defs/notApplicable" }] }, "filter_state": { "const": "EXACT_REPOSITORY_OBJECT_BYTES" } } },
+    "committedTreeBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "commit_id", "root_tree_id", "path", "object_type", "tree_id", "inclusions", "exclusions", "filter_state"], "properties": { "binding_mode": { "const": "COMMITTED" }, "commit_id": { "$ref": "#/$defs/gitObjectId" }, "root_tree_id": { "$ref": "#/$defs/gitObjectId" }, "path": { "$ref": "#/$defs/path" }, "object_type": { "const": "TREE" }, "tree_id": { "$ref": "#/$defs/gitObjectId" }, "inclusions": { "$ref": "#/$defs/pathArray" }, "exclusions": { "$ref": "#/$defs/pathArray" }, "filter_state": { "const": "EXACT_REPOSITORY_OBJECT_BYTES" } } },
+    "uncommittedBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "baseline_commit", "path", "baseline_object_id", "baseline_mode", "classification", "governed_candidate", "index_identity", "worktree_identity", "filter_state"], "properties": { "binding_mode": { "const": "UNCOMMITTED" }, "baseline_commit": { "$ref": "#/$defs/gitObjectId" }, "path": { "$ref": "#/$defs/path" }, "baseline_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "baseline_mode": { "oneOf": [{ "$ref": "#/$defs/fileMode" }, { "$ref": "#/$defs/notApplicable" }] }, "classification": { "enum": ["STAGED_ONLY", "UNSTAGED_ONLY", "STAGED_AND_UNSTAGED"] }, "governed_candidate": { "enum": ["INDEX", "WORKTREE"] }, "index_identity": { "oneOf": [{ "$ref": "#/$defs/worktreeIdentity" }, { "$ref": "#/$defs/notApplicable" }] }, "worktree_identity": { "oneOf": [{ "$ref": "#/$defs/worktreeIdentity" }, { "$ref": "#/$defs/notApplicable" }] }, "filter_state": { "const": "RAW_WORKTREE_BYTES_BEFORE_FILTERS" } }, "oneOf": [
+      { "properties": { "classification": { "const": "STAGED_ONLY" }, "governed_candidate": { "const": "INDEX" }, "index_identity": { "$ref": "#/$defs/worktreeIdentity" }, "worktree_identity": { "$ref": "#/$defs/notApplicable" } } },
+      { "properties": { "classification": { "const": "UNSTAGED_ONLY" }, "governed_candidate": { "const": "WORKTREE" }, "index_identity": { "$ref": "#/$defs/notApplicable" }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } },
+      { "properties": { "classification": { "const": "STAGED_AND_UNSTAGED" }, "index_identity": { "$ref": "#/$defs/worktreeIdentity" }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }
+    ] },
+    "stagedEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "state", "baseline_object_id", "baseline_mode", "stage_zero_object_id", "stage_zero_mode", "resulting_sha256", "byte_length", "classification", "worktree_state", "worktree_divergence", "worktree_identity"],
+      "properties": { "path": { "$ref": "#/$defs/path" }, "state": { "enum": ["ADDED", "MODIFIED", "DELETED"] }, "baseline_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "baseline_mode": { "oneOf": [{ "$ref": "#/$defs/fileMode" }, { "$ref": "#/$defs/notApplicable" }] }, "stage_zero_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "stage_zero_mode": { "oneOf": [{ "$ref": "#/$defs/fileMode" }, { "$ref": "#/$defs/notApplicable" }] }, "resulting_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "$ref": "#/$defs/notApplicable" }] }, "byte_length": { "oneOf": [{ "$ref": "#/$defs/decimal" }, { "$ref": "#/$defs/notApplicable" }] }, "classification": { "enum": ["STAGED", "STAGED_AND_UNSTAGED"] }, "worktree_state": { "enum": ["ABSENT", "MATCHES_STAGE_ZERO", "DIVERGED", "RECREATED"] }, "worktree_divergence": { "type": "boolean" }, "worktree_identity": { "oneOf": [{ "$ref": "#/$defs/worktreeIdentity" }, { "$ref": "#/$defs/absentWorktreeIdentity" }] } },
+      "oneOf": [
+        { "$ref": "#/$defs/stagedAddedMatches" }, { "$ref": "#/$defs/stagedAddedDiverged" }, { "$ref": "#/$defs/stagedAddedAbsent" },
+        { "$ref": "#/$defs/stagedModifiedMatches" }, { "$ref": "#/$defs/stagedModifiedDiverged" }, { "$ref": "#/$defs/stagedModifiedAbsent" },
+        { "$ref": "#/$defs/stagedDeletedAbsent" }, { "$ref": "#/$defs/stagedDeletedRecreated" }
+      ]
+    },
+    "stagedAddedMatches": { "properties": { "state": { "const": "ADDED" }, "classification": { "const": "STAGED" }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "byte_length": { "$ref": "#/$defs/decimal" }, "worktree_state": { "const": "MATCHES_STAGE_ZERO" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } },
+    "stagedAddedDiverged": { "properties": { "state": { "const": "ADDED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "byte_length": { "$ref": "#/$defs/decimal" }, "worktree_state": { "const": "DIVERGED" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } },
+    "stagedAddedAbsent": { "properties": { "state": { "const": "ADDED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "byte_length": { "$ref": "#/$defs/decimal" }, "worktree_state": { "const": "ABSENT" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/absentWorktreeIdentity" } } },
+    "stagedModifiedMatches": { "properties": { "state": { "const": "MODIFIED" }, "classification": { "const": "STAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "byte_length": { "$ref": "#/$defs/decimal" }, "worktree_state": { "const": "MATCHES_STAGE_ZERO" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } },
+    "stagedModifiedDiverged": { "properties": { "state": { "const": "MODIFIED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "byte_length": { "$ref": "#/$defs/decimal" }, "worktree_state": { "const": "DIVERGED" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } },
+    "stagedModifiedAbsent": { "properties": { "state": { "const": "MODIFIED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "byte_length": { "$ref": "#/$defs/decimal" }, "worktree_state": { "const": "ABSENT" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/absentWorktreeIdentity" } } },
+    "stagedDeletedAbsent": { "properties": { "state": { "const": "DELETED" }, "classification": { "const": "STAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "resulting_sha256": { "$ref": "#/$defs/notApplicable" }, "byte_length": { "$ref": "#/$defs/notApplicable" }, "worktree_state": { "const": "ABSENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/absentWorktreeIdentity" } } },
+    "stagedDeletedRecreated": { "properties": { "state": { "const": "DELETED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "resulting_sha256": { "$ref": "#/$defs/notApplicable" }, "byte_length": { "$ref": "#/$defs/notApplicable" }, "worktree_state": { "const": "RECREATED" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } },
+    "stagedBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "baseline_commit", "index_identity", "entries", "conflict_state", "filter_state"], "properties": { "binding_mode": { "const": "STAGED" }, "baseline_commit": { "$ref": "#/$defs/gitObjectId" }, "index_identity": { "$ref": "#/$defs/sha256" }, "entries": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stagedEntry" } }, "conflict_state": { "const": "NO_CONFLICT_STAGES" }, "filter_state": { "const": "EXACT_STAGE_ZERO_AND_RAW_WORKTREE_BYTES" } } },
+    "untrackedBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "baseline_commit", "path", "classification", "expected_worktree_scope", "worktree_identity", "baseline_state", "index_state", "filter_state"], "properties": { "binding_mode": { "const": "UNTRACKED" }, "baseline_commit": { "$ref": "#/$defs/gitObjectId" }, "path": { "$ref": "#/$defs/path" }, "classification": { "const": "UNTRACKED" }, "expected_worktree_scope": { "$ref": "#/$defs/pathArray" }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" }, "baseline_state": { "const": "ABSENT" }, "index_state": { "const": "ABSENT" }, "filter_state": { "const": "RAW_WORKTREE_BYTES_BEFORE_FILTERS" } } },
+    "manifestEntry": {
+      "type": "object", "additionalProperties": false,
+      "required": ["path", "state", "baseline_object_id", "baseline_mode", "stage_zero_object_id", "stage_zero_mode", "resulting_bytes", "resulting_sha256", "resulting_git_object_id", "byte_length", "resulting_mode", "classification", "rename_from", "rename_to", "deletion", "worktree_state", "worktree_divergence", "worktree_identity", "symlink_target_sha256", "submodule_commit_id"],
+      "properties": { "path": { "$ref": "#/$defs/path" }, "state": { "enum": ["ADDED", "MODIFIED", "DELETED", "RENAMED_OLD", "RENAMED_NEW"] }, "baseline_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "baseline_mode": { "oneOf": [{ "$ref": "#/$defs/fileMode" }, { "$ref": "#/$defs/notApplicable" }] }, "stage_zero_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "stage_zero_mode": { "oneOf": [{ "$ref": "#/$defs/fileMode" }, { "$ref": "#/$defs/notApplicable" }] }, "resulting_bytes": { "oneOf": [{ "$ref": "#/$defs/contentIdentity" }, { "$ref": "#/$defs/notApplicable" }] }, "resulting_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "$ref": "#/$defs/notApplicable" }] }, "resulting_git_object_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] }, "byte_length": { "oneOf": [{ "$ref": "#/$defs/decimal" }, { "$ref": "#/$defs/notApplicable" }] }, "resulting_mode": { "oneOf": [{ "$ref": "#/$defs/fileMode" }, { "$ref": "#/$defs/notApplicable" }] }, "classification": { "enum": ["STAGED", "UNSTAGED", "UNTRACKED", "STAGED_AND_UNSTAGED"] }, "rename_from": { "oneOf": [{ "$ref": "#/$defs/path" }, { "$ref": "#/$defs/notApplicable" }] }, "rename_to": { "oneOf": [{ "$ref": "#/$defs/path" }, { "$ref": "#/$defs/notApplicable" }] }, "deletion": { "type": "boolean" }, "worktree_state": { "enum": ["ABSENT", "PRESENT", "MATCHES_STAGE_ZERO", "DIVERGED", "RECREATED"] }, "worktree_divergence": { "type": "boolean" }, "worktree_identity": { "oneOf": [{ "$ref": "#/$defs/worktreeIdentity" }, { "$ref": "#/$defs/absentWorktreeIdentity" }] }, "symlink_target_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "$ref": "#/$defs/notApplicable" }] }, "submodule_commit_id": { "oneOf": [{ "$ref": "#/$defs/gitObjectId" }, { "$ref": "#/$defs/notApplicable" }] } },
+      "oneOf": [
+        { "$ref": "#/$defs/manifestStagedAddition" }, { "$ref": "#/$defs/manifestStagedAdditionDiverged" },
+        { "$ref": "#/$defs/manifestStagedModification" }, { "$ref": "#/$defs/manifestStagedModificationDiverged" },
+        { "$ref": "#/$defs/manifestStagedDeletionAbsent" }, { "$ref": "#/$defs/manifestStagedDeletionRecreated" },
+        { "$ref": "#/$defs/manifestWorktreeAddition" }, { "$ref": "#/$defs/manifestUnstagedModification" },
+        { "$ref": "#/$defs/manifestUnstagedDeletion" }, { "$ref": "#/$defs/manifestRenameOld" }, { "$ref": "#/$defs/manifestRenameNew" }
+      ]
+    },
+    "manifestResultPresent": { "oneOf": [
+      { "properties": { "resulting_bytes": { "$ref": "#/$defs/contentIdentity" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "resulting_git_object_id": { "$ref": "#/$defs/gitObjectId" }, "byte_length": { "$ref": "#/$defs/decimal" }, "resulting_mode": { "enum": ["100644", "100755"] }, "symlink_target_sha256": { "$ref": "#/$defs/notApplicable" }, "submodule_commit_id": { "$ref": "#/$defs/notApplicable" } } },
+      { "properties": { "resulting_bytes": { "$ref": "#/$defs/contentIdentity" }, "resulting_sha256": { "$ref": "#/$defs/sha256" }, "resulting_git_object_id": { "$ref": "#/$defs/gitObjectId" }, "byte_length": { "$ref": "#/$defs/decimal" }, "resulting_mode": { "const": "120000" }, "symlink_target_sha256": { "$ref": "#/$defs/sha256" }, "submodule_commit_id": { "$ref": "#/$defs/notApplicable" } } },
+      { "properties": { "resulting_bytes": { "$ref": "#/$defs/notApplicable" }, "resulting_sha256": { "$ref": "#/$defs/notApplicable" }, "resulting_git_object_id": { "$ref": "#/$defs/gitObjectId" }, "byte_length": { "$ref": "#/$defs/notApplicable" }, "resulting_mode": { "const": "160000" }, "symlink_target_sha256": { "$ref": "#/$defs/notApplicable" }, "submodule_commit_id": { "$ref": "#/$defs/gitObjectId" } } }
+    ] },
+    "manifestResultAbsent": { "properties": { "resulting_bytes": { "$ref": "#/$defs/notApplicable" }, "resulting_sha256": { "$ref": "#/$defs/notApplicable" }, "resulting_git_object_id": { "$ref": "#/$defs/notApplicable" }, "byte_length": { "$ref": "#/$defs/notApplicable" }, "resulting_mode": { "$ref": "#/$defs/notApplicable" }, "symlink_target_sha256": { "$ref": "#/$defs/notApplicable" }, "submodule_commit_id": { "$ref": "#/$defs/notApplicable" } } },
+    "manifestNoRename": { "properties": { "rename_from": { "$ref": "#/$defs/notApplicable" }, "rename_to": { "$ref": "#/$defs/notApplicable" } } },
+    "manifestStagedAddition": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "ADDED" }, "classification": { "const": "STAGED" }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "deletion": { "const": false }, "worktree_state": { "const": "MATCHES_STAGE_ZERO" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestStagedAdditionDiverged": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "ADDED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "deletion": { "const": false }, "worktree_state": { "const": "DIVERGED" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestStagedModification": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "MODIFIED" }, "classification": { "const": "STAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "deletion": { "const": false }, "worktree_state": { "const": "MATCHES_STAGE_ZERO" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestStagedModificationDiverged": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "MODIFIED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/gitObjectId" }, "stage_zero_mode": { "$ref": "#/$defs/fileMode" }, "deletion": { "const": false }, "worktree_state": { "const": "DIVERGED" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestStagedDeletionAbsent": { "allOf": [{ "$ref": "#/$defs/manifestResultAbsent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "DELETED" }, "classification": { "const": "STAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "deletion": { "const": true }, "worktree_state": { "const": "ABSENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/absentWorktreeIdentity" } } }] },
+    "manifestStagedDeletionRecreated": { "allOf": [{ "$ref": "#/$defs/manifestResultAbsent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "DELETED" }, "classification": { "const": "STAGED_AND_UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "deletion": { "const": true }, "worktree_state": { "const": "RECREATED" }, "worktree_divergence": { "const": true }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestWorktreeAddition": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "ADDED" }, "classification": { "enum": ["UNSTAGED", "UNTRACKED"] }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "deletion": { "const": false }, "worktree_state": { "const": "PRESENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestUnstagedModification": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "MODIFIED" }, "classification": { "const": "UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "deletion": { "const": false }, "worktree_state": { "const": "PRESENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "manifestUnstagedDeletion": { "allOf": [{ "$ref": "#/$defs/manifestResultAbsent" }, { "$ref": "#/$defs/manifestNoRename" }, { "properties": { "state": { "const": "DELETED" }, "classification": { "const": "UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "deletion": { "const": true }, "worktree_state": { "const": "ABSENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/absentWorktreeIdentity" } } }] },
+    "manifestRenameOld": { "allOf": [{ "$ref": "#/$defs/manifestResultAbsent" }, { "properties": { "state": { "const": "RENAMED_OLD" }, "classification": { "const": "UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/gitObjectId" }, "baseline_mode": { "$ref": "#/$defs/fileMode" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "rename_from": { "$ref": "#/$defs/notApplicable" }, "rename_to": { "$ref": "#/$defs/path" }, "deletion": { "const": true }, "worktree_state": { "const": "ABSENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/absentWorktreeIdentity" } } }] },
+    "manifestRenameNew": { "allOf": [{ "$ref": "#/$defs/manifestResultPresent" }, { "properties": { "state": { "const": "RENAMED_NEW" }, "classification": { "const": "UNSTAGED" }, "baseline_object_id": { "$ref": "#/$defs/notApplicable" }, "baseline_mode": { "$ref": "#/$defs/notApplicable" }, "stage_zero_object_id": { "$ref": "#/$defs/notApplicable" }, "stage_zero_mode": { "$ref": "#/$defs/notApplicable" }, "rename_from": { "$ref": "#/$defs/path" }, "rename_to": { "$ref": "#/$defs/notApplicable" }, "deletion": { "const": false }, "worktree_state": { "const": "PRESENT" }, "worktree_divergence": { "const": false }, "worktree_identity": { "$ref": "#/$defs/worktreeIdentity" } } }] },
+    "mixedBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "candidate_manifest_id", "schema_version", "baseline_commit", "inclusions", "exclusions", "entries", "filter_state"], "properties": { "binding_mode": { "const": "MIXED_MANIFEST" }, "candidate_manifest_id": { "type": "string", "pattern": "^ES-CANDIDATE-MANIFEST-SHA256-[0-9a-f]{64}$" }, "schema_version": { "const": "1.0.0" }, "baseline_commit": { "$ref": "#/$defs/gitObjectId" }, "inclusions": { "$ref": "#/$defs/pathArray" }, "exclusions": { "$ref": "#/$defs/pathArray" }, "entries": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/manifestEntry" } }, "filter_state": { "const": "EXACT_INDEX_AND_RAW_WORKTREE_BYTES" } } },
+    "publishedBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "local_immutable_identity", "remote_repository_identity", "resolved_remote_object_id", "mutable_ref_name", "ref_observation_timestamp", "observation_method"], "properties": { "binding_mode": { "const": "PUBLISHED" }, "local_immutable_identity": { "$ref": "#/$defs/nonEmptyString" }, "remote_repository_identity": { "$ref": "#/$defs/nonEmptyString" }, "resolved_remote_object_id": { "$ref": "#/$defs/gitObjectId" }, "mutable_ref_name": { "$ref": "#/$defs/nonEmptyString" }, "ref_observation_timestamp": { "$ref": "#/$defs/timestamp" }, "observation_method": { "$ref": "#/$defs/nonEmptyString" } } },
+    "externalBinding": { "type": "object", "additionalProperties": false, "required": ["binding_mode", "issuer_identity", "governed_subject", "content_identity", "capture_method", "temporal_boundary", "location_identity", "access_limitations", "transformation"], "properties": { "binding_mode": { "const": "EXTERNAL" }, "issuer_identity": { "$ref": "#/$defs/nonEmptyString" }, "governed_subject": { "$ref": "#/$defs/nonEmptyString" }, "content_identity": { "$ref": "#/$defs/contentIdentity" }, "capture_method": { "$ref": "#/$defs/nonEmptyString" }, "temporal_boundary": { "$ref": "#/$defs/timestamp" }, "location_identity": { "$ref": "#/$defs/location" }, "access_limitations": { "$ref": "#/$defs/limitations" }, "transformation": { "oneOf": [{ "$ref": "#/$defs/nonEmptyString" }, { "$ref": "#/$defs/notApplicable" }] } } },
+    "stringArray": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+    "stableStatement": { "type": "object", "additionalProperties": false, "required": ["item_id", "statement"], "properties": { "item_id": { "$ref": "#/$defs/nonEmptyString" }, "statement": { "$ref": "#/$defs/nonEmptyString" } } },
+    "stableStatementArray": { "type": "array", "items": { "$ref": "#/$defs/stableStatement" }, "uniqueItems": true },
+    "lifecycleRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_type", "schema_version", "evidence_record_id", "lifecycle_responsibility", "lifecycle_status", "governed_subject", "repository_identity", "branch_or_ref_context", "baseline_commit", "worktree_classification", "artifact_path", "artifact_sha256", "git_blob_id", "accountable_human_authorization", "authorization_issuer", "actor_identity", "model_family_version", "session_identity", "independence_declaration", "review_or_execution_scope", "commands_and_arguments", "command_completion_exit_status", "bounded_results", "findings", "dispositions", "residual_risks", "uncertainty", "decision", "authority_granted", "authority_withheld", "decision_effect", "next_responsibility_requiring_authorization", "non_authorizing_evidence_statement", "start_timestamp", "completion_timestamp", "resulting_artifact_identity", "predecessor_evidence_id", "correction_or_supersession_reference", "retention_class", "retention_assignment_state", "retention_assignment_authority", "evidence_origin_state", "artifact_binding"],
+      "properties": {
+        "artifact_type": { "const": "LIFECYCLE_EVIDENCE_RECORD" }, "schema_version": { "const": "1.0.0" },
+        "evidence_record_id": { "type": "string", "pattern": "^ES-EVIDENCE-RECORD-SHA256-[0-9a-f]{64}$" },
+        "lifecycle_responsibility": { "$ref": "#/$defs/responsibility" }, "lifecycle_status": { "$ref": "#/$defs/nonEmptyString" },
+        "governed_subject": { "$ref": "#/$defs/subject" }, "repository_identity": { "$ref": "#/$defs/nonEmptyString" },
+        "branch_or_ref_context": { "$ref": "#/$defs/stringOrStatus" }, "baseline_commit": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+        "worktree_classification": { "$ref": "#/$defs/nonEmptyString" }, "artifact_path": { "$ref": "#/$defs/stringOrStatus" },
+        "artifact_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "$ref": "#/$defs/status" }] }, "git_blob_id": { "$ref": "#/$defs/stringOrStatus" },
+        "accountable_human_authorization": { "oneOf": [{ "$ref": "#/$defs/authority" }, { "$ref": "#/$defs/status" }] },
+        "authorization_issuer": { "$ref": "#/$defs/stringOrStatus" }, "actor_identity": { "$ref": "#/$defs/actor" },
+        "model_family_version": { "$ref": "#/$defs/stringOrStatus" }, "session_identity": { "$ref": "#/$defs/stringOrStatus" },
+        "independence_declaration": { "$ref": "#/$defs/stringOrStatus" }, "review_or_execution_scope": { "$ref": "#/$defs/nonEmptyString" },
+        "commands_and_arguments": { "$ref": "#/$defs/stringArray" }, "command_completion_exit_status": { "$ref": "#/$defs/stringArray" },
+        "bounded_results": { "$ref": "#/$defs/stringArray" }, "findings": { "$ref": "#/$defs/stableStatementArray" },
+        "dispositions": { "$ref": "#/$defs/stableStatementArray" }, "residual_risks": { "$ref": "#/$defs/stableStatementArray" }, "uncertainty": { "$ref": "#/$defs/stableStatementArray" },
+        "decision": { "$ref": "#/$defs/nonEmptyString" }, "authority_granted": { "$ref": "#/$defs/responsibilityArray" },
+        "authority_withheld": { "$ref": "#/$defs/responsibilityArray" }, "decision_effect": { "$ref": "#/$defs/nonEmptyString" },
+        "next_responsibility_requiring_authorization": { "oneOf": [{ "$ref": "#/$defs/responsibility" }, { "const": "NONE" }] },
+        "non_authorizing_evidence_statement": { "const": "EVIDENCE_IDENTITY_AND_RETENTION_DO_NOT_GRANT_AUTHORITY_V1" },
+        "start_timestamp": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "$ref": "#/$defs/status" }] }, "completion_timestamp": { "$ref": "#/$defs/timestamp" },
+        "resulting_artifact_identity": { "$ref": "#/$defs/stringOrStatus" }, "predecessor_evidence_id": { "$ref": "#/$defs/stringOrStatus" },
+        "correction_or_supersession_reference": { "$ref": "#/$defs/stringOrStatus" }, "retention_class": { "enum": ["TRANSIENT_CHECKPOINT", "SLICE_LIFECYCLE", "REPOSITORY_LIFETIME", "GOVERNANCE_PERMANENT"] },
+        "retention_assignment_state": { "enum": ["PROPOSED", "ASSIGNED_PENDING_RETENTION"] }, "retention_assignment_authority": { "oneOf": [{ "$ref": "#/$defs/authority" }, { "$ref": "#/$defs/status" }] },
+        "evidence_origin_state": { "enum": ["CONTEMPORANEOUS", "RECONSTRUCTED_VERIFIED", "RECONSTRUCTED_PARTIAL", "UNVERIFIED_REFERENCE"] },
+        "artifact_binding": { "$ref": "#/$defs/artifactBinding" }, "payload_location": { "$ref": "#/$defs/payloadLocation" }
+      }
+    },
+    "eventKind": { "enum": ["RETENTION_ASSIGNED", "RETENTION_CONFIRMED", "RETRIEVABILITY_CONFIRMED", "RETENTION_RELOCATED", "RETENTION_UNAVAILABLE", "RETENTION_RESTORED", "RETENTION_EXPIRED", "DELETION_AUTHORIZED", "DELETION_COMPLETED", "LEGAL_HOLD_APPLIED", "LEGAL_HOLD_RELEASED"] },
+    "retainedBindingPair": { "oneOf": [
+      { "properties": { "content_identity": { "$ref": "#/$defs/contentIdentity" }, "package_identity": { "$ref": "#/$defs/notApplicable" } } },
+      { "properties": { "content_identity": { "$ref": "#/$defs/notApplicable" }, "package_identity": { "$ref": "#/$defs/packageIdentity" } } }
+    ] },
+    "operationalEvent": { "allOf": [
+      { "$ref": "#/$defs/retainedBindingPair" },
+      { "properties": { "correction_details": { "$ref": "#/$defs/notApplicable" }, "invalidation_details": { "$ref": "#/$defs/notApplicable" } } },
+      { "oneOf": [
+        { "properties": { "event_kind": { "const": "RETENTION_ASSIGNED" }, "prior_retention_event_id": { "$ref": "#/$defs/notApplicable" }, "assignment_authority": { "$ref": "#/$defs/assignmentAuthority" }, "authority_reference": { "$ref": "#/$defs/authority" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "const": "UNKNOWN" }, "reason_code": { "const": "ASSIGNMENT_AUTHORIZED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "RETENTION_CONFIRMED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/location" }, "location_type": { "enum": ["REPOSITORY_PATH", "CONTENT_ADDRESS", "EXTERNAL_IMMUTABLE_OBJECT"] }, "retrievability_state": { "const": "UNKNOWN" }, "reason_code": { "const": "RETENTION_VERIFIED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "RETRIEVABILITY_CONFIRMED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/location" }, "location_type": { "enum": ["REPOSITORY_PATH", "CONTENT_ADDRESS", "EXTERNAL_IMMUTABLE_OBJECT"] }, "retrievability_state": { "const": "RETRIEVABLE" }, "reason_code": { "const": "RETRIEVABILITY_VERIFIED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "RETENTION_RELOCATED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/relocation" }, "location_type": { "enum": ["REPOSITORY_PATH", "CONTENT_ADDRESS", "EXTERNAL_IMMUTABLE_OBJECT"] }, "retrievability_state": { "const": "UNKNOWN" }, "reason_code": { "const": "LOCATION_CHANGED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "RETENTION_UNAVAILABLE" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/location" }, "location_type": { "enum": ["REPOSITORY_PATH", "CONTENT_ADDRESS", "EXTERNAL_IMMUTABLE_OBJECT"] }, "retrievability_state": { "const": "UNAVAILABLE" }, "reason_code": { "const": "RETENTION_FAILURE_OBSERVED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "RETENTION_RESTORED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/location" }, "location_type": { "enum": ["REPOSITORY_PATH", "CONTENT_ADDRESS", "EXTERNAL_IMMUTABLE_OBJECT"] }, "retrievability_state": { "const": "RETRIEVABLE" }, "reason_code": { "const": "RETENTION_RESTORATION_VERIFIED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "RETENTION_EXPIRED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/authority" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "enum": ["UNKNOWN", "RETRIEVABLE", "UNAVAILABLE"] }, "reason_code": { "const": "RETENTION_POLICY_EXPIRED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "DELETION_AUTHORIZED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/authority" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "enum": ["UNKNOWN", "RETRIEVABLE", "UNAVAILABLE"] }, "reason_code": { "const": "DELETION_SEPARATELY_AUTHORIZED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "DELETION_COMPLETED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "const": "UNAVAILABLE" }, "reason_code": { "const": "DELETION_COMPLETION_VERIFIED" }, "deletion_tombstone_id": { "type": "string", "pattern": "^ES-EVIDENCE-DELETION-TOMBSTONE-SHA256-[0-9a-f]{64}$" } } },
+        { "properties": { "event_kind": { "const": "LEGAL_HOLD_APPLIED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/authority" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "enum": ["UNKNOWN", "RETRIEVABLE", "UNAVAILABLE"] }, "reason_code": { "const": "LEGAL_HOLD_AUTHORIZED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } },
+        { "properties": { "event_kind": { "const": "LEGAL_HOLD_RELEASED" }, "prior_retention_event_id": { "type": "string" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/authority" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "enum": ["UNKNOWN", "RETRIEVABLE", "UNAVAILABLE"] }, "reason_code": { "const": "LEGAL_HOLD_RELEASE_AUTHORIZED" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" } } }
+      ] }
+    ] },
+    "retentionEvent": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifact_type", "retention_event_schema_version", "retention_event_id", "retention_event_transition_kind", "event_kind", "evidence_record_id", "prior_retention_event_id", "retention_class", "assignment_authority", "content_identity", "package_identity", "location_identity", "location_type", "retrievability_state", "event_timestamp", "actor_identity", "authority_reference", "reason_code", "deletion_tombstone_id", "limitations", "correction_details", "invalidation_details", "non_authorizing_evidence_statement"],
+      "properties": {
+        "artifact_type": { "const": "RETENTION_EVENT_RECORD" }, "retention_event_schema_version": { "const": "1.0.0" },
+        "retention_event_id": { "type": "string", "pattern": "^ES-EVIDENCE-RETENTION-EVENT-SHA256-[0-9a-f]{64}$" },
+        "retention_event_transition_kind": { "enum": ["OPERATIONAL", "CORRECTION", "INVALIDATION"] },
+        "event_kind": { "oneOf": [{ "$ref": "#/$defs/eventKind" }, { "$ref": "#/$defs/status" }] },
+        "evidence_record_id": { "type": "string", "pattern": "^ES-EVIDENCE-RECORD-SHA256-[0-9a-f]{64}$" }, "prior_retention_event_id": { "$ref": "#/$defs/stringOrStatus" },
+        "retention_class": { "oneOf": [{ "enum": ["TRANSIENT_CHECKPOINT", "SLICE_LIFECYCLE", "REPOSITORY_LIFETIME", "GOVERNANCE_PERMANENT"] }, { "$ref": "#/$defs/notApplicable" }] },
+        "assignment_authority": { "oneOf": [{ "$ref": "#/$defs/assignmentAuthority" }, { "$ref": "#/$defs/status" }] }, "content_identity": { "oneOf": [{ "$ref": "#/$defs/contentIdentity" }, { "$ref": "#/$defs/status" }] },
+        "package_identity": { "oneOf": [{ "$ref": "#/$defs/packageIdentity" }, { "$ref": "#/$defs/status" }] }, "location_identity": { "oneOf": [{ "$ref": "#/$defs/location" }, { "$ref": "#/$defs/relocation" }, { "$ref": "#/$defs/status" }] },
+        "location_type": { "oneOf": [{ "enum": ["REPOSITORY_PATH", "CONTENT_ADDRESS", "EXTERNAL_IMMUTABLE_OBJECT"] }, { "$ref": "#/$defs/status" }] },
+        "retrievability_state": { "oneOf": [{ "enum": ["UNKNOWN", "RETRIEVABLE", "UNAVAILABLE", "DELETED"] }, { "$ref": "#/$defs/notApplicable" }] }, "event_timestamp": { "$ref": "#/$defs/timestamp" },
+        "actor_identity": { "$ref": "#/$defs/actor" }, "authority_reference": { "oneOf": [{ "$ref": "#/$defs/authority" }, { "$ref": "#/$defs/status" }] },
+        "reason_code": { "$ref": "#/$defs/stringOrStatus" }, "deletion_tombstone_id": { "$ref": "#/$defs/stringOrStatus" }, "limitations": { "$ref": "#/$defs/limitations" },
+        "correction_details": { "type": ["object"] }, "invalidation_details": { "type": ["object"] },
+        "non_authorizing_evidence_statement": { "const": "EVIDENCE_IDENTITY_AND_RETENTION_DO_NOT_GRANT_AUTHORITY_V1" }
+      },
+      "allOf": [
+        { "if": { "properties": { "retention_event_transition_kind": { "const": "OPERATIONAL" } } }, "then": { "$ref": "#/$defs/operationalEvent" } },
+        { "if": { "properties": { "retention_event_transition_kind": { "const": "CORRECTION" } } }, "then": { "properties": { "event_kind": { "$ref": "#/$defs/notApplicable" }, "prior_retention_event_id": { "type": "string", "pattern": "^ES-EVIDENCE-RETENTION-EVENT-SHA256-[0-9a-f]{64}$" }, "retention_class": { "$ref": "#/$defs/notApplicable" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "content_identity": { "$ref": "#/$defs/notApplicable" }, "package_identity": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "reason_code": { "$ref": "#/$defs/notApplicable" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" }, "correction_details": { "$ref": "#/$defs/correctionDetails" }, "invalidation_details": { "$ref": "#/$defs/notApplicable" } } } },
+        { "if": { "properties": { "retention_event_transition_kind": { "const": "INVALIDATION" } } }, "then": { "properties": { "event_kind": { "$ref": "#/$defs/notApplicable" }, "prior_retention_event_id": { "type": "string", "pattern": "^ES-EVIDENCE-RETENTION-EVENT-SHA256-[0-9a-f]{64}$" }, "retention_class": { "$ref": "#/$defs/notApplicable" }, "assignment_authority": { "$ref": "#/$defs/notApplicable" }, "content_identity": { "$ref": "#/$defs/notApplicable" }, "package_identity": { "$ref": "#/$defs/notApplicable" }, "location_identity": { "$ref": "#/$defs/notApplicable" }, "location_type": { "$ref": "#/$defs/notApplicable" }, "retrievability_state": { "$ref": "#/$defs/notApplicable" }, "authority_reference": { "$ref": "#/$defs/notApplicable" }, "reason_code": { "$ref": "#/$defs/notApplicable" }, "deletion_tombstone_id": { "$ref": "#/$defs/notApplicable" }, "correction_details": { "$ref": "#/$defs/notApplicable" }, "invalidation_details": { "$ref": "#/$defs/invalidationDetails" } } } }
+      ]
+    },
+    "relocation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["prior_location_identity", "resulting_location_identity"],
+      "properties": {
+        "prior_location_identity": { "$ref": "#/$defs/location" },
+        "resulting_location_identity": { "$ref": "#/$defs/location" }
+      }
+    },
+    "correctedEvidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["supported_claim", "evidence_kind", "predecessor_evidence_identity", "corrected_evidence_identity"],
+      "properties": {
+        "supported_claim": { "enum": ["RETENTION_CLASS", "ASSIGNMENT_AUTHORITY", "LOCATION_IDENTITY", "RETRIEVABILITY_STATE", "EVENT_ATTRIBUTION", "EVENT_AUTHORITY", "DELETION_COMPLETION", "LEGAL_HOLD_STATUS"] },
+        "evidence_kind": { "enum": ["AUTHORITY_REFERENCE", "ACTOR_IDENTITY", "LOCATION_EVIDENCE", "RETRIEVABILITY_EVIDENCE", "DELETION_TOMBSTONE", "LEGAL_HOLD_EVIDENCE"] },
+        "predecessor_evidence_identity": { "$ref": "#/$defs/sha256" },
+        "corrected_evidence_identity": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "correctedField": {
+      "type": "object", "additionalProperties": false,
+      "required": ["field_name", "prior_value_identity", "corrected_value", "correction_value_schema"],
+      "properties": {
+        "field_name": { "enum": ["event_timestamp", "actor_identity", "authority_reference", "reason_code", "limitations", "non_authorizing_evidence_statement"] },
+        "prior_value_identity": { "$ref": "#/$defs/sha256" },
+        "corrected_value": {},
+        "correction_value_schema": { "enum": ["RETENTION_EVENT_TIMESTAMP_V1", "RETENTION_EVENT_ACTOR_IDENTITY_V1", "RETENTION_EVENT_AUTHORITY_REFERENCE_V1", "RETENTION_EVENT_REASON_CODE_V1", "RETENTION_EVENT_LIMITATIONS_V1", "RETENTION_EVENT_NON_AUTHORIZING_STATEMENT_V1"] }
+      },
+      "oneOf": [
+        { "properties": { "field_name": { "const": "event_timestamp" }, "correction_value_schema": { "const": "RETENTION_EVENT_TIMESTAMP_V1" }, "corrected_value": { "$ref": "#/$defs/timestamp" } } },
+        { "properties": { "field_name": { "const": "actor_identity" }, "correction_value_schema": { "const": "RETENTION_EVENT_ACTOR_IDENTITY_V1" }, "corrected_value": { "$ref": "#/$defs/actor" } } },
+        { "properties": { "field_name": { "const": "authority_reference" }, "correction_value_schema": { "const": "RETENTION_EVENT_AUTHORITY_REFERENCE_V1" }, "corrected_value": { "oneOf": [{ "$ref": "#/$defs/authority" }, { "$ref": "#/$defs/notApplicable" }] } } },
+        { "properties": { "field_name": { "const": "reason_code" }, "correction_value_schema": { "const": "RETENTION_EVENT_REASON_CODE_V1" }, "corrected_value": { "$ref": "#/$defs/stringOrStatus" } } },
+        { "properties": { "field_name": { "const": "limitations" }, "correction_value_schema": { "const": "RETENTION_EVENT_LIMITATIONS_V1" }, "corrected_value": { "$ref": "#/$defs/limitations" } } },
+        { "properties": { "field_name": { "const": "non_authorizing_evidence_statement" }, "correction_value_schema": { "const": "RETENTION_EVENT_NON_AUTHORIZING_STATEMENT_V1" }, "corrected_value": { "const": "EVIDENCE_IDENTITY_AND_RETENTION_DO_NOT_GRANT_AUTHORITY_V1" } } }
+      ]
+    },
+    "correctionDetails": {
+      "type": "object", "additionalProperties": false,
+      "required": ["corrected_fields", "corrected_evidence", "correction_reason_code", "correction_authority_reference"],
+      "properties": {
+        "corrected_fields": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/correctedField" } },
+        "corrected_evidence": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/correctedEvidence" } }, "correction_reason_code": { "enum": ["FACTUAL_ERROR", "IDENTITY_ERROR", "ATTRIBUTION_ERROR", "EVIDENCE_REPLACEMENT", "SCHEMA_INTERPRETATION_ERROR"] },
+        "correction_authority_reference": { "$ref": "#/$defs/authority" }
+      },
+      "anyOf": [
+        { "properties": { "corrected_fields": { "minItems": 1 } } },
+        { "properties": { "corrected_evidence": { "minItems": 1 } } }
+      ]
+    },
+    "invalidationDetails": {
+      "type": "object", "additionalProperties": false,
+      "required": ["invalidated_fields", "invalidation_reason_code", "invalidation_authority_reference", "attributable_replacement_event_id"],
+      "properties": {
+        "invalidated_fields": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["event_timestamp", "actor_identity", "authority_reference", "reason_code", "limitations", "non_authorizing_evidence_statement", "event_kind", "evidence_record_id", "content_identity", "package_identity"] } },
+        "invalidation_reason_code": { "enum": ["CLAIM_UNSUPPORTED", "CLAIM_CONTRADICTED", "AUTHORITY_INVALID", "WRONG_EVIDENCE_RECORD", "WRONG_RETAINED_CONTENT"] },
+        "invalidation_authority_reference": { "$ref": "#/$defs/authority" }, "attributable_replacement_event_id": { "$ref": "#/$defs/stringOrStatus" }
+      }
+    },
+    "deletionState": { "enum": ["DELETION_AUTHORIZED", "DELETION_IN_PROGRESS", "DELETION_COMPLETED", "DELETION_FAILED", "DELETION_BLOCKED_BY_LEGAL_HOLD"] },
+    "deletionTombstone": {
+      "type": "object", "additionalProperties": false,
+      "required": ["artifact_type", "tombstone_schema_version", "deletion_tombstone_id", "deletion_state", "tombstone_transition_kind", "tombstone_transition_details", "evidence_record_id", "retention_event_id", "governed_subject", "deleted_payload_identity", "deleted_payload_media_type", "deletion_reason_category", "deletion_authority_reference", "legal_authority_reference", "legal_hold_status", "deletion_requested_timestamp", "deletion_completed_timestamp", "deletion_actor_identity", "deletion_method_class", "completion_evidence", "remaining_retained_metadata", "retrievability_state", "admissibility_effect", "limitations", "predecessor_tombstone_id", "non_authorizing_evidence_statement"],
+      "properties": {
+        "artifact_type": { "const": "DELETION_TOMBSTONE" }, "tombstone_schema_version": { "const": "1.0.0" },
+        "deletion_tombstone_id": { "type": "string", "pattern": "^ES-EVIDENCE-DELETION-TOMBSTONE-SHA256-[0-9a-f]{64}$" }, "deletion_state": { "$ref": "#/$defs/deletionState" },
+        "tombstone_transition_kind": { "enum": ["INITIAL", "STATE_PROGRESSION", "CORRECTION", "INVALIDATION"] }, "tombstone_transition_details": { "oneOf": [{ "$ref": "#/$defs/notApplicable" }, { "$ref": "#/$defs/tombstoneProgressionDetails" }, { "$ref": "#/$defs/tombstoneCorrectionDetails" }, { "$ref": "#/$defs/tombstoneInvalidationDetails" }] },
+        "evidence_record_id": { "type": "string", "pattern": "^ES-EVIDENCE-RECORD-SHA256-[0-9a-f]{64}$" }, "retention_event_id": { "$ref": "#/$defs/stringOrStatus" },
+        "governed_subject": { "$ref": "#/$defs/subject" }, "deleted_payload_identity": { "$ref": "#/$defs/contentIdentity" }, "deleted_payload_media_type": { "$ref": "#/$defs/nonEmptyString" },
+        "deletion_reason_category": { "$ref": "#/$defs/nonEmptyString" }, "deletion_authority_reference": { "$ref": "#/$defs/authority" }, "legal_authority_reference": { "oneOf": [{ "$ref": "#/$defs/authority" }, { "$ref": "#/$defs/status" }] },
+        "legal_hold_status": { "enum": ["NO_HOLD", "ACTIVE_HOLD", "HOLD_RELEASED", "UNKNOWN"] }, "deletion_requested_timestamp": { "$ref": "#/$defs/timestamp" },
+        "deletion_completed_timestamp": { "oneOf": [{ "$ref": "#/$defs/timestamp" }, { "$ref": "#/$defs/status" }] }, "deletion_actor_identity": { "$ref": "#/$defs/actor" },
+        "deletion_method_class": { "$ref": "#/$defs/stringOrStatus" }, "completion_evidence": { "$ref": "#/$defs/stringOrStatus" }, "remaining_retained_metadata": { "$ref": "#/$defs/stringArray" },
+        "retrievability_state": { "enum": ["UNKNOWN", "RETRIEVABLE", "PARTIALLY_RETRIEVABLE", "DELETED"] }, "admissibility_effect": { "$ref": "#/$defs/nonEmptyString" },
+        "limitations": { "$ref": "#/$defs/limitations" }, "predecessor_tombstone_id": { "$ref": "#/$defs/stringOrStatus" }, "non_authorizing_evidence_statement": { "const": "EVIDENCE_IDENTITY_AND_RETENTION_DO_NOT_GRANT_AUTHORITY_V1" }
+      },
+      "allOf": [
+        { "if": { "properties": { "deletion_state": { "const": "DELETION_COMPLETED" } } }, "then": { "properties": { "deletion_completed_timestamp": { "$ref": "#/$defs/timestamp" }, "deletion_method_class": { "$ref": "#/$defs/nonEmptyString" }, "completion_evidence": { "$ref": "#/$defs/nonEmptyString" }, "legal_hold_status": { "enum": ["NO_HOLD", "HOLD_RELEASED"] }, "retrievability_state": { "const": "DELETED" } } }, "else": { "properties": { "deletion_completed_timestamp": { "$ref": "#/$defs/notApplicable" }, "deletion_method_class": { "$ref": "#/$defs/notApplicable" }, "completion_evidence": { "$ref": "#/$defs/notApplicable" } } } },
+        { "if": { "properties": { "deletion_state": { "const": "DELETION_BLOCKED_BY_LEGAL_HOLD" } } }, "then": { "properties": { "legal_hold_status": { "const": "ACTIVE_HOLD" }, "retrievability_state": { "not": { "const": "DELETED" } } } } },
+        { "if": { "properties": { "deletion_state": { "enum": ["DELETION_IN_PROGRESS", "DELETION_FAILED"] } } }, "then": { "properties": { "retrievability_state": { "not": { "const": "DELETED" } } } } },
+        { "if": { "properties": { "tombstone_transition_kind": { "const": "INITIAL" } } }, "then": { "properties": { "predecessor_tombstone_id": { "$ref": "#/$defs/notApplicable" }, "tombstone_transition_details": { "$ref": "#/$defs/notApplicable" } } } },
+        { "if": { "properties": { "tombstone_transition_kind": { "const": "STATE_PROGRESSION" } } }, "then": { "properties": { "predecessor_tombstone_id": { "type": "string", "pattern": "^ES-EVIDENCE-DELETION-TOMBSTONE-SHA256-[0-9a-f]{64}$" }, "tombstone_transition_details": { "$ref": "#/$defs/tombstoneProgressionDetails" } } } },
+        { "if": { "properties": { "tombstone_transition_kind": { "const": "CORRECTION" } } }, "then": { "properties": { "predecessor_tombstone_id": { "type": "string", "pattern": "^ES-EVIDENCE-DELETION-TOMBSTONE-SHA256-[0-9a-f]{64}$" }, "tombstone_transition_details": { "$ref": "#/$defs/tombstoneCorrectionDetails" } } } },
+        { "if": { "properties": { "tombstone_transition_kind": { "const": "INVALIDATION" } } }, "then": { "properties": { "predecessor_tombstone_id": { "type": "string", "pattern": "^ES-EVIDENCE-DELETION-TOMBSTONE-SHA256-[0-9a-f]{64}$" }, "tombstone_transition_details": { "$ref": "#/$defs/tombstoneInvalidationDetails" } } } }
+      ]
+    },
+    "tombstoneCorrectableField": { "enum": ["tombstone_schema_version", "evidence_record_id", "retention_event_id", "governed_subject", "deleted_payload_identity", "deleted_payload_media_type", "deletion_reason_category", "deletion_authority_reference", "legal_authority_reference", "legal_hold_status", "deletion_requested_timestamp", "deletion_completed_timestamp", "deletion_actor_identity", "deletion_method_class", "completion_evidence", "remaining_retained_metadata", "retrievability_state", "admissibility_effect", "limitations", "non_authorizing_evidence_statement"] },
+    "tombstoneProgressionDetails": { "type": "object", "additionalProperties": false, "required": ["predecessor_deletion_state", "successor_deletion_state"], "properties": { "predecessor_deletion_state": { "$ref": "#/$defs/deletionState" }, "successor_deletion_state": { "$ref": "#/$defs/deletionState" } }, "oneOf": [
+      { "properties": { "predecessor_deletion_state": { "const": "DELETION_AUTHORIZED" }, "successor_deletion_state": { "enum": ["DELETION_IN_PROGRESS", "DELETION_COMPLETED", "DELETION_FAILED", "DELETION_BLOCKED_BY_LEGAL_HOLD"] } } },
+      { "properties": { "predecessor_deletion_state": { "const": "DELETION_IN_PROGRESS" }, "successor_deletion_state": { "enum": ["DELETION_COMPLETED", "DELETION_FAILED", "DELETION_BLOCKED_BY_LEGAL_HOLD"] } } },
+      { "properties": { "predecessor_deletion_state": { "const": "DELETION_FAILED" }, "successor_deletion_state": { "enum": ["DELETION_IN_PROGRESS", "DELETION_BLOCKED_BY_LEGAL_HOLD"] } } },
+      { "properties": { "predecessor_deletion_state": { "const": "DELETION_BLOCKED_BY_LEGAL_HOLD" }, "successor_deletion_state": { "enum": ["DELETION_IN_PROGRESS", "DELETION_FAILED"] } } }
+    ] },
+    "tombstoneCorrectedEvidence": { "type": "object", "additionalProperties": false, "required": ["evidence_kind", "predecessor_evidence_identity", "corrected_evidence_identity", "supported_claim"], "properties": { "evidence_kind": { "enum": ["AUTHORITY_REFERENCE", "LEGAL_AUTHORITY_REFERENCE", "LEGAL_HOLD_OBSERVATION", "PAYLOAD_IDENTITY", "ACTOR_IDENTITY", "COMPLETION_EVIDENCE", "RETRIEVABILITY_EVIDENCE"] }, "predecessor_evidence_identity": { "$ref": "#/$defs/sha256" }, "corrected_evidence_identity": { "$ref": "#/$defs/sha256" }, "supported_claim": { "enum": ["DELETION_AUTHORITY", "LEGAL_AUTHORITY", "LEGAL_HOLD_STATUS", "DELETED_PAYLOAD_IDENTITY", "DELETION_ACTOR_IDENTITY", "DELETION_COMPLETION", "RETRIEVABILITY_STATE", "DELETION_STATE"] } } },
+    "tombstoneCorrectionDetails": { "type": "object", "additionalProperties": false, "required": ["corrected_fields", "corrected_evidence", "correction_reason_code"], "properties": { "corrected_fields": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/tombstoneCorrectableField" } }, "corrected_evidence": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/tombstoneCorrectedEvidence" } }, "correction_reason_code": { "enum": ["FACTUAL_ERROR", "IDENTITY_ERROR", "ATTRIBUTION_ERROR", "EVIDENCE_REPLACEMENT"] } } },
+    "tombstoneInvalidationDetails": { "type": "object", "additionalProperties": false, "required": ["invalidated_fields", "invalidation_reason_code", "invalidation_authority_reference", "attributable_successor_tombstone_id"], "properties": { "invalidated_fields": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "oneOf": [{ "$ref": "#/$defs/tombstoneCorrectableField" }, { "const": "deletion_state" }] } }, "invalidation_reason_code": { "enum": ["CLAIM_UNSUPPORTED", "CLAIM_CONTRADICTED", "AUTHORITY_INVALID", "WRONG_GOVERNED_SUBJECT"] }, "invalidation_authority_reference": { "$ref": "#/$defs/authority" }, "attributable_successor_tombstone_id": { "oneOf": [{ "type": "string", "pattern": "^ES-EVIDENCE-DELETION-TOMBSTONE-SHA256-[0-9a-f]{64}$" }, { "$ref": "#/$defs/notApplicable" }] } } }
+  }
+}
